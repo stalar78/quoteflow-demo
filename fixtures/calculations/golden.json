@@ -1,0 +1,508 @@
+{
+  "schemaVersion": "1",
+  "cases": [
+    {
+      "name": "regular_integer_quantity",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "Demo recipient",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-regular",
+            "name": "Planning session",
+            "description": "Synthetic fixture item",
+            "quantity": "2",
+            "unit": "hour",
+            "unitPriceMinor": 150000,
+            "discountBasisPoints": 0
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      },
+      "expected": {
+        "items": [
+          {
+            "itemId": "item-regular",
+            "lineGrossMinor": 300000,
+            "lineDiscountMinor": 0,
+            "lineTotalMinor": 300000
+          }
+        ],
+        "subtotalMinor": 300000,
+        "overallDiscountMinor": 0,
+        "amountAfterDiscountMinor": 300000,
+        "taxMinor": 0,
+        "totalMinor": 300000,
+        "currency": "RUB",
+        "calculationVersion": "1"
+      }
+    },
+    {
+      "name": "fractional_quantity",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-fractional",
+            "name": "Fractional work",
+            "description": "",
+            "quantity": "1.5",
+            "unit": "hour",
+            "unitPriceMinor": 100000,
+            "discountBasisPoints": 0
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      },
+      "expected": {
+        "items": [
+          {
+            "itemId": "item-fractional",
+            "lineGrossMinor": 150000,
+            "lineDiscountMinor": 0,
+            "lineTotalMinor": 150000
+          }
+        ],
+        "subtotalMinor": 150000,
+        "overallDiscountMinor": 0,
+        "amountAfterDiscountMinor": 150000,
+        "taxMinor": 0,
+        "totalMinor": 150000,
+        "currency": "RUB",
+        "calculationVersion": "1"
+      }
+    },
+    {
+      "name": "gross_amount_half_up_rounding",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-gross-half-up",
+            "name": "Half unit",
+            "description": "",
+            "quantity": "0.5",
+            "unit": "unit",
+            "unitPriceMinor": 1,
+            "discountBasisPoints": 0
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      },
+      "expected": {
+        "items": [
+          {
+            "itemId": "item-gross-half-up",
+            "lineGrossMinor": 1,
+            "lineDiscountMinor": 0,
+            "lineTotalMinor": 1
+          }
+        ],
+        "subtotalMinor": 1,
+        "overallDiscountMinor": 0,
+        "amountAfterDiscountMinor": 1,
+        "taxMinor": 0,
+        "totalMinor": 1,
+        "currency": "RUB",
+        "calculationVersion": "1"
+      }
+    },
+    {
+      "name": "item_discount",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-discount",
+            "name": "Discounted item",
+            "description": "",
+            "quantity": "1",
+            "unit": "unit",
+            "unitPriceMinor": 100000,
+            "discountBasisPoints": 1500
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      },
+      "expected": {
+        "items": [
+          {
+            "itemId": "item-discount",
+            "lineGrossMinor": 100000,
+            "lineDiscountMinor": 15000,
+            "lineTotalMinor": 85000
+          }
+        ],
+        "subtotalMinor": 85000,
+        "overallDiscountMinor": 0,
+        "amountAfterDiscountMinor": 85000,
+        "taxMinor": 0,
+        "totalMinor": 85000,
+        "currency": "RUB",
+        "calculationVersion": "1"
+      }
+    },
+    {
+      "name": "item_discount_half_up_rounding",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-discount-half-up",
+            "name": "Tiny discount",
+            "description": "",
+            "quantity": "1",
+            "unit": "unit",
+            "unitPriceMinor": 1,
+            "discountBasisPoints": 5000
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      },
+      "expected": {
+        "items": [
+          {
+            "itemId": "item-discount-half-up",
+            "lineGrossMinor": 1,
+            "lineDiscountMinor": 1,
+            "lineTotalMinor": 0
+          }
+        ],
+        "subtotalMinor": 0,
+        "overallDiscountMinor": 0,
+        "amountAfterDiscountMinor": 0,
+        "taxMinor": 0,
+        "totalMinor": 0,
+        "currency": "RUB",
+        "calculationVersion": "1"
+      }
+    },
+    {
+      "name": "overall_discount",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-overall-discount",
+            "name": "Overall discount base",
+            "description": "",
+            "quantity": "2",
+            "unit": "unit",
+            "unitPriceMinor": 100000,
+            "discountBasisPoints": 0
+          }
+        ],
+        "overallDiscountBasisPoints": 1000,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      },
+      "expected": {
+        "items": [
+          {
+            "itemId": "item-overall-discount",
+            "lineGrossMinor": 200000,
+            "lineDiscountMinor": 0,
+            "lineTotalMinor": 200000
+          }
+        ],
+        "subtotalMinor": 200000,
+        "overallDiscountMinor": 20000,
+        "amountAfterDiscountMinor": 180000,
+        "taxMinor": 0,
+        "totalMinor": 180000,
+        "currency": "RUB",
+        "calculationVersion": "1"
+      }
+    },
+    {
+      "name": "tax_after_overall_discount",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-tax-after-discount",
+            "name": "Tax base",
+            "description": "",
+            "quantity": "2",
+            "unit": "unit",
+            "unitPriceMinor": 100000,
+            "discountBasisPoints": 0
+          }
+        ],
+        "overallDiscountBasisPoints": 1000,
+        "taxBasisPoints": 2000,
+        "comment": "",
+        "currency": "RUB"
+      },
+      "expected": {
+        "items": [
+          {
+            "itemId": "item-tax-after-discount",
+            "lineGrossMinor": 200000,
+            "lineDiscountMinor": 0,
+            "lineTotalMinor": 200000
+          }
+        ],
+        "subtotalMinor": 200000,
+        "overallDiscountMinor": 20000,
+        "amountAfterDiscountMinor": 180000,
+        "taxMinor": 36000,
+        "totalMinor": 216000,
+        "currency": "RUB",
+        "calculationVersion": "1"
+      }
+    },
+    {
+      "name": "several_items",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-a",
+            "name": "Item A",
+            "description": "",
+            "quantity": "1",
+            "unit": "unit",
+            "unitPriceMinor": 100000,
+            "discountBasisPoints": 0
+          },
+          {
+            "id": "item-b",
+            "name": "Item B",
+            "description": "",
+            "quantity": "1",
+            "unit": "unit",
+            "unitPriceMinor": 250000,
+            "discountBasisPoints": 0
+          },
+          {
+            "id": "item-c",
+            "name": "Item C",
+            "description": "",
+            "quantity": "1",
+            "unit": "unit",
+            "unitPriceMinor": 50000,
+            "discountBasisPoints": 0
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      },
+      "expected": {
+        "items": [
+          {
+            "itemId": "item-a",
+            "lineGrossMinor": 100000,
+            "lineDiscountMinor": 0,
+            "lineTotalMinor": 100000
+          },
+          {
+            "itemId": "item-b",
+            "lineGrossMinor": 250000,
+            "lineDiscountMinor": 0,
+            "lineTotalMinor": 250000
+          },
+          {
+            "itemId": "item-c",
+            "lineGrossMinor": 50000,
+            "lineDiscountMinor": 0,
+            "lineTotalMinor": 50000
+          }
+        ],
+        "subtotalMinor": 400000,
+        "overallDiscountMinor": 0,
+        "amountAfterDiscountMinor": 400000,
+        "taxMinor": 0,
+        "totalMinor": 400000,
+        "currency": "RUB",
+        "calculationVersion": "1"
+      }
+    },
+    {
+      "name": "one_hundred_percent_item_discount",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-free",
+            "name": "Fully discounted item",
+            "description": "",
+            "quantity": "1",
+            "unit": "unit",
+            "unitPriceMinor": 100000,
+            "discountBasisPoints": 10000
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      },
+      "expected": {
+        "items": [
+          {
+            "itemId": "item-free",
+            "lineGrossMinor": 100000,
+            "lineDiscountMinor": 100000,
+            "lineTotalMinor": 0
+          }
+        ],
+        "subtotalMinor": 0,
+        "overallDiscountMinor": 0,
+        "amountAfterDiscountMinor": 0,
+        "taxMinor": 0,
+        "totalMinor": 0,
+        "currency": "RUB",
+        "calculationVersion": "1"
+      }
+    },
+    {
+      "name": "zero_tax",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-zero-tax",
+            "name": "No tax item",
+            "description": "",
+            "quantity": "3",
+            "unit": "unit",
+            "unitPriceMinor": 12345,
+            "discountBasisPoints": 0
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      },
+      "expected": {
+        "items": [
+          {
+            "itemId": "item-zero-tax",
+            "lineGrossMinor": 37035,
+            "lineDiscountMinor": 0,
+            "lineTotalMinor": 37035
+          }
+        ],
+        "subtotalMinor": 37035,
+        "overallDiscountMinor": 0,
+        "amountAfterDiscountMinor": 37035,
+        "taxMinor": 0,
+        "totalMinor": 37035,
+        "currency": "RUB",
+        "calculationVersion": "1"
+      }
+    },
+    {
+      "name": "zero_unit_price",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-zero-price",
+            "name": "Zero price item",
+            "description": "",
+            "quantity": "10",
+            "unit": "unit",
+            "unitPriceMinor": 0,
+            "discountBasisPoints": 0
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 2000,
+        "comment": "",
+        "currency": "RUB"
+      },
+      "expected": {
+        "items": [
+          {
+            "itemId": "item-zero-price",
+            "lineGrossMinor": 0,
+            "lineDiscountMinor": 0,
+            "lineTotalMinor": 0
+          }
+        ],
+        "subtotalMinor": 0,
+        "overallDiscountMinor": 0,
+        "amountAfterDiscountMinor": 0,
+        "taxMinor": 0,
+        "totalMinor": 0,
+        "currency": "RUB",
+        "calculationVersion": "1"
+      }
+    }
+  ]
+}

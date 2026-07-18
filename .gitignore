@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+
+# Frontend build output
+frontend/dist/
+frontend/.vite/
+
+# Python virtual environments
+.venv/
+venv/
+env/
+backend/.venv/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Test and coverage output
+.pytest_cache/
+coverage/
+.coverage
+htmlcov/
+frontend/coverage/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# SQLite and database files
+*.sqlite
+*.sqlite3
+*.db
+
+# Temporary PDF files
+*.pdf.tmp
+tmp-pdf/
+
+# Logs
+*.log
+logs/
+
+# Editor and OS noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

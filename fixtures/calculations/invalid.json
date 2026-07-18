@@ -1,0 +1,547 @@
+{
+  "schemaVersion": "1",
+  "cases": [
+    {
+      "name": "empty_items",
+      "errorCode": "INVALID_ITEMS",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      }
+    },
+    {
+      "name": "negative_quantity",
+      "errorCode": "INVALID_QUANTITY",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-negative-quantity",
+            "name": "Invalid item",
+            "description": "",
+            "quantity": "-1",
+            "unit": "unit",
+            "unitPriceMinor": 1000,
+            "discountBasisPoints": 0
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      }
+    },
+    {
+      "name": "zero_quantity",
+      "errorCode": "INVALID_QUANTITY",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-zero-quantity",
+            "name": "Invalid item",
+            "description": "",
+            "quantity": "0",
+            "unit": "unit",
+            "unitPriceMinor": 1000,
+            "discountBasisPoints": 0
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      }
+    },
+    {
+      "name": "malformed_quantity",
+      "errorCode": "INVALID_QUANTITY",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-malformed-quantity",
+            "name": "Invalid item",
+            "description": "",
+            "quantity": "1.",
+            "unit": "unit",
+            "unitPriceMinor": 1000,
+            "discountBasisPoints": 0
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      }
+    },
+    {
+      "name": "scientific_notation",
+      "errorCode": "INVALID_QUANTITY",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-scientific",
+            "name": "Invalid item",
+            "description": "",
+            "quantity": "1e3",
+            "unit": "unit",
+            "unitPriceMinor": 1000,
+            "discountBasisPoints": 0
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      }
+    },
+    {
+      "name": "comma_decimal_separator",
+      "errorCode": "INVALID_QUANTITY",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-comma",
+            "name": "Invalid item",
+            "description": "",
+            "quantity": "1,5",
+            "unit": "unit",
+            "unitPriceMinor": 1000,
+            "discountBasisPoints": 0
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      }
+    },
+    {
+      "name": "more_than_three_decimal_places",
+      "errorCode": "INVALID_QUANTITY",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-too-precise",
+            "name": "Invalid item",
+            "description": "",
+            "quantity": "1.0001",
+            "unit": "unit",
+            "unitPriceMinor": 1000,
+            "discountBasisPoints": 0
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      }
+    },
+    {
+      "name": "whitespace_padded_quantity",
+      "errorCode": "INVALID_QUANTITY",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-whitespace-quantity",
+            "name": "Invalid item",
+            "description": "",
+            "quantity": " 1 ",
+            "unit": "unit",
+            "unitPriceMinor": 1000,
+            "discountBasisPoints": 0
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      }
+    },
+    {
+      "name": "whitespace_only_item_id",
+      "errorCode": "INVALID_ITEM_ID",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "   ",
+            "name": "Invalid item",
+            "description": "",
+            "quantity": "1",
+            "unit": "unit",
+            "unitPriceMinor": 1000,
+            "discountBasisPoints": 0
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      }
+    },
+    {
+      "name": "negative_unit_price",
+      "errorCode": "INVALID_MONEY",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-negative-price",
+            "name": "Invalid item",
+            "description": "",
+            "quantity": "1",
+            "unit": "unit",
+            "unitPriceMinor": -1,
+            "discountBasisPoints": 0
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      }
+    },
+    {
+      "name": "fractional_basis_points",
+      "errorCode": "INVALID_BASIS_POINTS",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-fractional-bps",
+            "name": "Invalid item",
+            "description": "",
+            "quantity": "1",
+            "unit": "unit",
+            "unitPriceMinor": 1000,
+            "discountBasisPoints": 1.5
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      }
+    },
+    {
+      "name": "basis_points_over_10000",
+      "errorCode": "INVALID_BASIS_POINTS",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-bps-over",
+            "name": "Invalid item",
+            "description": "",
+            "quantity": "1",
+            "unit": "unit",
+            "unitPriceMinor": 1000,
+            "discountBasisPoints": 10001
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      }
+    },
+    {
+      "name": "duplicate_item_ids",
+      "errorCode": "DUPLICATE_ITEM_ID",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "duplicate-item",
+            "name": "Item one",
+            "description": "",
+            "quantity": "1",
+            "unit": "unit",
+            "unitPriceMinor": 1000,
+            "discountBasisPoints": 0
+          },
+          {
+            "id": "duplicate-item",
+            "name": "Item two",
+            "description": "",
+            "quantity": "1",
+            "unit": "unit",
+            "unitPriceMinor": 1000,
+            "discountBasisPoints": 0
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      }
+    },
+    {
+      "name": "more_than_100_items",
+      "errorCode": "INVALID_ITEMS",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-001",
+            "name": "Bulk item",
+            "description": "",
+            "quantity": "1",
+            "unit": "unit",
+            "unitPriceMinor": 1,
+            "discountBasisPoints": 0
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB",
+        "fixtureExpandItemsTo": 101
+      }
+    },
+    {
+      "name": "unsupported_schema_version",
+      "errorCode": "UNSUPPORTED_SCHEMA_VERSION",
+      "input": {
+        "schemaVersion": "2",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-schema",
+            "name": "Invalid item",
+            "description": "",
+            "quantity": "1",
+            "unit": "unit",
+            "unitPriceMinor": 1000,
+            "discountBasisPoints": 0
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      }
+    },
+    {
+      "name": "calculation_limit_overflow",
+      "errorCode": "CALCULATION_LIMIT_EXCEEDED",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-overflow-a",
+            "name": "Large item A",
+            "description": "",
+            "quantity": "1000000",
+            "unit": "unit",
+            "unitPriceMinor": 1000000000000,
+            "discountBasisPoints": 0
+          },
+          {
+            "id": "item-overflow-b",
+            "name": "Large item B",
+            "description": "",
+            "quantity": "1000000",
+            "unit": "unit",
+            "unitPriceMinor": 1000000000000,
+            "discountBasisPoints": 0
+          },
+          {
+            "id": "item-overflow-c",
+            "name": "Large item C",
+            "description": "",
+            "quantity": "1000000",
+            "unit": "unit",
+            "unitPriceMinor": 1000000000000,
+            "discountBasisPoints": 0
+          },
+          {
+            "id": "item-overflow-d",
+            "name": "Large item D",
+            "description": "",
+            "quantity": "1000000",
+            "unit": "unit",
+            "unitPriceMinor": 1000000000000,
+            "discountBasisPoints": 0
+          },
+          {
+            "id": "item-overflow-e",
+            "name": "Large item E",
+            "description": "",
+            "quantity": "1000000",
+            "unit": "unit",
+            "unitPriceMinor": 1000000000000,
+            "discountBasisPoints": 0
+          },
+          {
+            "id": "item-overflow-f",
+            "name": "Large item F",
+            "description": "",
+            "quantity": "1000000",
+            "unit": "unit",
+            "unitPriceMinor": 1000000000000,
+            "discountBasisPoints": 0
+          },
+          {
+            "id": "item-overflow-g",
+            "name": "Large item G",
+            "description": "",
+            "quantity": "1000000",
+            "unit": "unit",
+            "unitPriceMinor": 1000000000000,
+            "discountBasisPoints": 0
+          },
+          {
+            "id": "item-overflow-h",
+            "name": "Large item H",
+            "description": "",
+            "quantity": "1000000",
+            "unit": "unit",
+            "unitPriceMinor": 1000000000000,
+            "discountBasisPoints": 0
+          },
+          {
+            "id": "item-overflow-i",
+            "name": "Large item I",
+            "description": "",
+            "quantity": "1000000",
+            "unit": "unit",
+            "unitPriceMinor": 1000000000000,
+            "discountBasisPoints": 0
+          },
+          {
+            "id": "item-overflow-j",
+            "name": "Large item J",
+            "description": "",
+            "quantity": "1000000",
+            "unit": "unit",
+            "unitPriceMinor": 1000000000000,
+            "discountBasisPoints": 0
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB"
+      }
+    },
+    {
+      "name": "unexpected_input_fields",
+      "errorCode": "UNEXPECTED_FIELD",
+      "input": {
+        "schemaVersion": "1",
+        "projectName": "Demo project",
+        "client": {
+          "displayName": "",
+          "contactNote": ""
+        },
+        "items": [
+          {
+            "id": "item-extra",
+            "name": "Invalid item",
+            "description": "",
+            "quantity": "1",
+            "unit": "unit",
+            "unitPriceMinor": 1000,
+            "discountBasisPoints": 0,
+            "lineTotalMinor": 1000
+          }
+        ],
+        "overallDiscountBasisPoints": 0,
+        "taxBasisPoints": 0,
+        "comment": "",
+        "currency": "RUB",
+        "totalMinor": 1000
+      }
+    }
+  ]
+}
