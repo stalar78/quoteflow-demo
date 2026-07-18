@@ -1,41 +1,46 @@
 # 04. Data Model
 
-Документ описывает планируемую модель данных MVP. Названия типов и полей фиксируются на английском языке.
+Документ фиксирует модель MVP. Названия типов и полей сохраняются на английском языке.
 
-## QuoteCalculationDraft
+## QuoteCalculationInput
 
-Корневой объект расчета:
+Строгая модель для расчёта и backend preview:
 
 ```ts
-type QuoteCalculationDraft = {
-  schemaVersion: string;
-  id: string;
+type QuoteCalculationInput = {
+  schemaVersion: "1";
   projectName: string;
   client: QuoteClient;
   items: QuoteItem[];
   overallDiscountBasisPoints: number;
   taxBasisPoints: number;
   comment: string;
-  createdAt: string;
-  updatedAt: string;
   currency: "RUB";
 };
 ```
 
-## QuoteClient
+## QuoteCalculationDraft
+
+Локальный черновик расширяет input метаданными:
+
+```ts
+type QuoteCalculationDraft = QuoteCalculationInput & {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+};
+```
+
+Draft state в UI может временно содержать строки, ещё не прошедшие строгую схему. Перед export, preview или PDF он нормализуется в `QuoteCalculationInput`.
+
+## Supporting types
 
 ```ts
 type QuoteClient = {
   displayName: string;
   contactNote: string;
 };
-```
 
-`QuoteClient` содержит только условные демонстрационные данные. Это не CRM-модель.
-
-## QuoteItem
-
-```ts
 type QuoteItem = {
   id: string;
   name: string;
@@ -45,11 +50,14 @@ type QuoteItem = {
   unitPriceMinor: number;
   discountBasisPoints: number;
 };
-```
 
-## CalculationResult
+type CalculationLineResult = {
+  itemId: string;
+  lineGrossMinor: number;
+  lineDiscountMinor: number;
+  lineTotalMinor: number;
+};
 
-```ts
 type CalculationResult = {
   items: CalculationLineResult[];
   subtotalMinor: number;
@@ -58,47 +66,43 @@ type CalculationResult = {
   taxMinor: number;
   totalMinor: number;
   currency: "RUB";
-  calculationVersion: string;
+  calculationVersion: "1";
 };
 ```
 
-## CalculationLineResult
-
-```ts
-type CalculationLineResult = {
-  itemId: string;
-  lineGrossMinor: number;
-  lineDiscountMinor: number;
-  lineTotalMinor: number;
-};
-```
+`QuoteClient` содержит только условные демонстрационные данные и не является CRM-моделью.
 
 ## Constraints
 
-- `projectName`: не более 120 символов.
-- `client.displayName`: не более 120 символов.
-- `client.contactNote`: не более 300 символов.
-- `items[].name`: не более 160 символов.
-- `items[].description`: не более 1000 символов.
-- `items[].unit`: не более 30 символов.
-- `comment`: не более 2000 символов.
-- `items`: максимум 100 позиций.
-- Отрицательные денежные значения запрещены.
-- Пустые строки нормализуются предсказуемо.
-- Неизвестные поля импортируемого JSON не должны молча становиться частью доверенной модели.
-- `schemaVersion` обязателен для JSON import/export.
+- `schemaVersion`: только `"1"`.
+- `projectName`: после trim от 0 до 120 символов для preview; от 1 до 120 для PDF.
+- `client.displayName`: от 0 до 120.
+- `client.contactNote`: от 0 до 300.
+- `items`: от 1 до 100 для валидного input.
+- `items[].id`: непустой UUID или другой документированный client-generated identifier, максимум 64 символа.
+- `items[].name`: после trim от 1 до 160.
+- `items[].description`: от 0 до 1000.
+- `items[].quantity`: по правилам calculation model.
+- `items[].unit`: после trim от 1 до 30.
+- `items[].unitPriceMinor`: целое число в разрешённом диапазоне.
+- `items[].discountBasisPoints`, `overallDiscountBasisPoints`, `taxBasisPoints`: целые числа от 0 до 10000.
+- `comment`: от 0 до 2000.
+- `createdAt`, `updatedAt`: UTC ISO 8601.
+- неизвестные поля отклоняются;
+- повторяющиеся item IDs отклоняются;
+- итоговые суммы никогда не принимаются во входной модели.
+
+## Normalization
+
+- значения строк trim-ятся на границе strict input;
+- пустые optional strings становятся `""`;
+- quantity преобразуется в каноническую десятичную строку;
+- порядок items сохраняется;
+- import с неизвестной `schemaVersion` завершается понятной ошибкой;
+- миграции между версиями не выполняются молча.
 
 ## Draft storage
 
-Черновики в `localStorage` должны:
+Ключ: `quoteflow:drafts:v1`.
 
-- храниться под версионированным ключом `quoteflow:drafts:v1`;
-- поддерживать удаление отдельного draft;
-- поддерживать полную очистку;
-- не синхронизироваться с backend;
-- не позиционироваться как надежное долгосрочное хранилище;
-- не содержать реальные персональные или конфиденциальные данные.
-
-## Версионирование
-
-`schemaVersion` и `calculationVersion` нужны для явного контроля изменений модели. При изменении структуры JSON import/export должна появляться стратегия migration или понятная ошибка несовместимости.
+Хранилище должно поддерживать список, сохранение, открытие, удаление одного draft и полную очистку. Оно не синхронизируется с backend и не считается долговременным или конфиденциальным хранилищем.
