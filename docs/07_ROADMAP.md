@@ -2,86 +2,71 @@
 
 ## Этап 0 — согласование рамки
 
-Статус: завершен.
+Статус: **завершён**.
 
-Результат: зафиксированы назначение проекта, ограничения MVP, стек и запрет на публикацию без отдельного review.
+Зафиксированы название, локальный путь, стек, модель хранения, ограничения MVP и границы репозиториев.
 
 ## Этап 1 — архитектура и документация
 
-Статус: текущий.
+Статус: **завершён**.
 
-Цель:
+Созданы и проверены project context, product requirements, architecture, calculation model, data model, API contract, security boundaries, workflow и handoff. Создан приватный GitHub-репозиторий `stalar78/quoteflow-demo`.
 
-- создать проектную документацию;
-- зафиксировать calculation model;
-- зафиксировать data model;
-- зафиксировать planned API contract;
-- описать security boundaries;
-- подготовить handoff для следующего этапа.
+## Этап 2 — scaffold и расчётное ядро
 
-На этом этапе не создаются frontend/backend-код, зависимости, тесты, Docker-конфигурация, commit, push, remote или GitHub repository.
-
-## Этап 2 — scaffold и расчетное ядро
+Статус: **следующий**.
 
 План:
 
-- scaffold frontend/backend;
-- конфигурация проверок;
-- synthetic fixtures;
-- calculation core;
-- frontend unit tests;
-- backend unit tests.
+- scaffold React/TypeScript/Vite frontend;
+- scaffold FastAPI backend;
+- минимальные конфигурации lint/test/build;
+- безопасные `.gitignore` и `.env.example`;
+- shared synthetic golden fixtures;
+- exact-integer calculation core во frontend и backend;
+- unit tests расчётной модели;
+- базовые endpoints `/api/health` и `/api/v1/calculations/preview`;
+- локальные команды запуска;
+- без UI продукта, PDF и Docker Compose на этом этапе.
 
-## Этап 3 — основной UI
+## Этап 3 — основной UI и черновики
 
-План:
-
-- основной UI;
-- dynamic items;
-- validation;
-- draft management;
+- расчётная форма и dynamic items;
+- validation и ошибки;
+- итоговый блок;
+- localStorage draft management;
 - responsive behavior;
 - accessibility baseline.
 
 ## Этап 4 — PDF
 
-План:
-
-- PDF technical spike;
-- выбор библиотеки;
-- проверка русского текста;
-- многостраничность;
-- полноценная PDF generation.
+- technical spike и обоснованный выбор библиотеки;
+- русский текст, переносы и многостраничность;
+- безопасная PDF generation;
+- print-friendly representation.
 
 ## Этап 5 — export и API preview
 
-План:
-
 - JSON import/export;
 - CSV export;
-- print representation;
-- API preview;
-- обновление документации.
+- payload preview;
+- документация фактической реализации.
 
-## Этап 6 — QA и publication review
+## Этап 6 — integration и QA
 
-План:
-
-- полный QA;
-- frontend tests;
-- backend tests;
-- production build;
 - Docker Compose;
+- frontend/backend integration;
+- полный test/build;
 - dependency audit;
-- security review;
-- publication review;
-- screenshots.
+- responsive/accessibility QA;
+- screenshots;
+- security/publication review.
 
-## Этап 7 — публикация
+## Этап 7 — публикация и deployment
 
-План:
-
-- создание и публикация GitHub repository после разрешения;
-- production deployment только после отдельного review.
+- решение о публичности репозитория;
+- добавление лицензии после согласования;
+- public GitHub только после audit;
+- live deployment только после отдельного review.
 
 Будущие этапы не считаются выполненными.
