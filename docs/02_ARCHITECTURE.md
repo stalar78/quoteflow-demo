@@ -1,100 +1,109 @@
 # 02. Архитектура
 
-## Планируемая структура
+## Текущая структура
 
 ```text
 frontend/
   src/
-    components/
     features/
       calculation/
-      drafts/
-      export/
-    lib/
-    services/
-    types/
-  tests/
+        calculate.ts
+        calculate.test.ts
+        errors.ts
+        types.ts
+    App.tsx
+    main.tsx
+  package.json
+  vite.config.ts
+  tsconfig*.json
 
 backend/
   app/
-    api/
+    api/routes/
+      calculations.py
+      health.py
     core/
+      calculation.py
+      errors.py
     schemas/
-    services/
+      calculation.py
+    config.py
+    main.py
   tests/
+    test_api.py
+    test_calculation.py
+  pyproject.toml
 
 fixtures/
   calculations/
+    golden.json
+    invalid.json
 
 docs/
 ```
 
-Эта структура описывает будущую организацию проекта. На Этапе 1 эти каталоги с кодом не создаются.
-
 ## Frontend boundary
 
-Frontend планируется как React + TypeScript приложение на Vite. Его зона ответственности:
+Frontend реализован как React + TypeScript приложение на Vite. На текущем этапе он содержит минимальный placeholder и отдельное расчётное ядро.
 
-- пользовательский интерфейс;
-- редактирование расчета;
-- локальная предварительная validation;
-- локальный расчет для быстрого feedback;
-- draft management через `localStorage`;
-- JSON import/export;
-- CSV export;
-- отправка валидного расчета в backend preview;
-- получение PDF как файла после backend generation.
+Реализовано:
 
-Frontend не считается доверенной стороной. Totals, пришедшие из frontend, не должны приниматься backend как источник истины.
+- строгие calculation types;
+- runtime validation;
+- парсинг decimal-string quantity;
+- exact-integer arithmetic через `bigint`;
+- стабильные domain errors;
+- тесты на общих fixtures.
+
+Следующий UI-слой будет отвечать за форму, локальную предварительную validation, быстрый расчёт, draft management и будущие export/API actions. Frontend не считается доверенной стороной.
 
 ## Backend boundary
 
-Backend планируется как Python + FastAPI сервис. Его зона ответственности:
+Backend реализован как stateless FastAPI service.
 
-- stateless API;
-- повторная server-side validation;
-- самостоятельный пересчет totals;
-- возвращение нормализованного calculation breakdown;
-- PDF generation на более позднем этапе;
-- демонстрация стабильного API contract.
+Реализовано:
 
-Backend не хранит пользовательские расчеты, черновики или документы в MVP.
+- строгие Pydantic schemas с запретом неизвестных полей;
+- повторный расчёт через Python `int`;
+- `GET /api/health`;
+- `POST /api/v1/calculations/preview`;
+- единый error envelope;
+- request ID;
+- CORS allowlist;
+- фактический request-body limit;
+- safe internal-error response.
+
+Backend не хранит расчёты, черновики или документы.
 
 ## Browser storage boundary
 
-Черновики существуют только в браузере. Планируемый ключ:
+Черновики ещё не реализованы. Для Этапа 3 зафиксирован ключ:
 
 ```text
 quoteflow:drafts:v1
 ```
 
-Черновики:
+Черновики будут существовать только в браузере, поддерживать удаление и полную очистку, не синхронизироваться с backend и не позиционироваться как надёжное или конфиденциальное хранилище.
 
-- не синхронизируются с backend;
-- могут быть удалены пользователем;
-- могут быть полностью очищены;
-- не должны содержать реальные персональные или конфиденциальные данные;
-- не позиционируются как надежное долгосрочное хранилище.
+## Calculation consistency
 
-## Архитектурные принципы
-
-- Расчетная логика отделена от UI.
-- Frontend не считается доверенной стороной.
-- Backend повторно валидирует и пересчитывает данные.
-- Расчетная семантика frontend и backend проверяется общими golden fixtures.
-- PDF по возможности формируется в памяти.
-- Временные файлы не сохраняются дольше запроса.
-- Приложение не собирает данные скрыто.
-- MVP не использует Redis, Celery, PostgreSQL, Kubernetes или очередь задач.
-- React Router добавляется только при реальной необходимости.
-- Архитектура должна оставаться небольшой и понятной.
+TypeScript и Python реализации используют одну формулу, одинаковые лимиты и общие JSON fixtures. Денежные вычисления не опираются на floating point. Backend всегда пересчитывает totals самостоятельно.
 
 ## Поток данных
 
-1. Пользователь редактирует draft на frontend.
-2. Draft временно сохраняется в `localStorage`.
-3. Frontend выполняет локальный расчет для UX.
-4. Для backend preview frontend отправляет валидную input model.
-5. Backend валидирует input model и пересчитывает totals.
-6. Backend возвращает normalized breakdown.
-7. Для PDF generation backend снова пересчитывает totals перед созданием документа.
+Текущий поток:
+
+1. Strict input поступает в calculation core или preview endpoint.
+2. Входные данные валидируются.
+3. Quantity переводится в целый `quantityMilli`.
+4. Totals вычисляются exact-integer алгоритмом.
+5. Возвращается нормализованный `CalculationResult`.
+
+Будущий UI-поток:
+
+1. Пользователь редактирует draft.
+2. UI хранит промежуточные строковые значения.
+3. Draft нормализуется в strict input.
+4. Frontend выполняет локальный расчёт.
+5. Draft может сохраняться в `localStorage`.
+6. На более позднем этапе strict input отправляется на backend preview или PDF.
