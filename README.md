@@ -10,40 +10,67 @@ QuoteFlow должен позволить подготовить расчёт п
 
 Приложение является демонстрационным инструментом, не заменяет бухгалтерское или юридическое сопровождение и не предназначено для реальных персональных, коммерческих или конфиденциальных данных. Расчёты необходимо проверять.
 
-## Планируемый MVP
+## Реализовано
 
-- динамические позиции: название, описание, количество, единица измерения и цена;
-- скидка позиции и общая скидка;
-- произвольная налоговая ставка или вариант «Без налога»;
-- точный автоматический пересчёт;
-- frontend- и backend-валидация;
-- черновики в `localStorage`;
-- JSON import/export;
-- CSV export позиций;
-- backend preview;
-- PDF generation и print-friendly representation;
-- responsive UI и базовая accessibility;
-- synthetic fixtures и тесты расчётного ядра;
-- локальный запуск через Docker Compose.
+- React + TypeScript + Vite frontend scaffold;
+- FastAPI backend scaffold;
+- точное расчётное ядро на TypeScript `bigint` и Python `int`;
+- документированный `ROUND_HALF_UP`;
+- общие synthetic golden/invalid fixtures;
+- frontend unit tests;
+- backend calculation и API tests;
+- `GET /api/health`;
+- `POST /api/v1/calculations/preview`;
+- строгая input validation и стабильные error codes;
+- request ID;
+- фактическое ограничение request body в 256 KiB;
+- CORS allowlist через environment;
+- безопасные `.gitignore`, `.gitattributes` и `.env.example`.
 
-Перечисленные возможности запланированы, но ещё не реализованы.
+## Ещё не реализовано
+
+- продуктовый интерфейс калькулятора;
+- draft management в `localStorage`;
+- JSON/CSV import/export;
+- PDF generation;
+- print-friendly representation;
+- Docker Compose;
+- production deployment.
 
 ## Стек
 
-- Frontend: React, TypeScript, Vite, Tailwind CSS, Vitest, Testing Library.
-- Backend: Python, FastAPI, Pydantic, pytest.
+- Frontend: React 19, TypeScript, Vite, Vitest, Testing Library.
+- Backend: Python 3.12+, FastAPI, Pydantic, pytest.
 - Draft storage: только браузерный `localStorage`.
 - Server storage: в MVP отсутствует.
 
-## Архитектурный принцип
+## Локальные проверки
 
-Frontend отвечает за UI, локальный расчёт и черновики. Backend остаётся stateless, повторно валидирует входные данные и самостоятельно пересчитывает totals перед preview или PDF. Расчётная семантика проверяется общими golden fixtures.
+Frontend:
+
+```bash
+cd frontend
+npm ci
+npm test
+npm run build
+npm run lint
+```
+
+Backend:
+
+```bash
+cd backend
+python -m venv .venv
+python -m pip install -e ".[test]"
+python -m pytest
+python -m uvicorn app.main:app --reload
+```
 
 ## Статус
 
-Этап 1 завершён: архитектурная рамка и документация подготовлены и прошли первичное review.
+Этапы 0–2 завершены. Следующий этап — основной responsive UI, локальный расчёт и управление черновиками.
 
-Репозиторий создан как приватный рабочий репозиторий. Frontend/backend-кода, зависимостей, Docker-конфигурации и production deployment пока нет. Публичная публикация и лицензия требуют отдельного решения.
+Репозиторий пока остаётся приватным. Лицензия, публичная публикация и production deployment требуют отдельного review.
 
 ## Документация
 
