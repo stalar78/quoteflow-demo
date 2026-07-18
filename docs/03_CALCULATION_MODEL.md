@@ -1,177 +1,83 @@
-# 03. Расчетная модель
+# 03. Расчётная модель
 
-## Валюта и денежные значения
+## Версия и валюта
 
-Основная валюта MVP: `RUB`.
-
-Денежные значения хранятся целыми числами в копейках. Форматированные рубли используются только в UI и документах.
+- `calculationVersion`: `"1"`.
+- Валюта MVP: `RUB`.
+- Денежные значения на границах модели выражаются целыми числами в копейках.
+- Форматированные рубли используются только в UI и документах.
+- Floating-point арифметика не используется как источник истины.
 
 ## Quantity
 
-`quantity`:
+`quantity` передаётся канонической десятичной строкой:
 
-- передается как десятичная строка;
-- имеет максимальную точность 3 знака после запятой;
-- имеет минимальное положительное значение `0.001`;
-- имеет максимальное значение `1000000`.
+- формат: `^(0|[1-9]\d*)(\.\d{1,3})?$`;
+- для валидного расчёта значение от `0.001` до `1000000`;
+- scientific notation, знак `+`, запятая и лишние нули перед целой частью запрещены;
+- UI может временно хранить невалидную строку только внутри draft state.
 
-Обычный JavaScript `number` не является источником истины для расчетов.
+Для расчёта строка преобразуется в целое `quantityMilli` с масштабом 1000. Например, `"1.5"` становится `1500`.
 
-## Rates
+## Money and rates
 
-Скидки и налог хранятся в basis points:
+- `unitPriceMinor`: целое число от `0` до `1_000_000_000_000`.
+- Скидки и налог — целые basis points от `0` до `10000`.
+- `100` basis points = 1%; `10000` = 100%.
+- `0` означает отсутствие скидки или налога.
+- Все промежуточные и итоговые значения должны быть неотрицательными и не превышать `MAX_SAFE_MINOR = 9_000_000_000_000_000`.
+- Выход за лимит приводит к `CALCULATION_LIMIT_EXCEEDED`, а не к потере точности.
 
-- `100` basis points = 1%;
-- `10000` basis points = 100%;
-- допустимый диапазон скидок: от `0` до `10000`;
-- допустимый диапазон налоговой ставки: от `0` до `10000`;
-- значение `0` означает отсутствие скидки или налога.
+Frontend выполняет целочисленную арифметику через `bigint` или эквивалентный exact-integer механизм. Backend использует Python `int`. После проверки лимита результат сериализуется как JSON integer.
 
-Для процентных операций ставка делится на `10000`.
+## ROUND_HALF_UP для неотрицательных чисел
 
-## Округление
+Для целых `numerator >= 0` и `denominator > 0`:
 
-Денежные результаты округляются до копейки по правилу `ROUND_HALF_UP`. Это правило должно одинаково выполняться во frontend и backend. Backend является финальной точкой проверки перед PDF generation.
+`roundHalfUp(numerator, denominator) = (numerator + floor(denominator / 2)) // denominator`
 
-## Порядок расчета
+Применение:
 
-1. `lineGross = round(quantity * unitPrice)`
-2. `lineDiscount = round(lineGross * lineDiscountRate)`
-3. `lineTotal = lineGross - lineDiscount`
-4. `subtotal = sum(lineTotal)`
-5. `overallDiscount = round(subtotal * overallDiscountRate)`
-6. `amountAfterDiscount = subtotal - overallDiscount`
-7. `taxAmount = round(amountAfterDiscount * taxRate)`
-8. `total = amountAfterDiscount + taxAmount`
+- line gross: denominator `1000`;
+- скидки и налог: denominator `10000`.
 
-Все денежные результаты в этой последовательности выражены в minor units.
+## Порядок расчёта
 
-## Состояния расчета
+Для каждой позиции:
 
-Важно различать:
+1. `quantityMilli = parseQuantity(quantity)`
+2. `lineGrossMinor = roundHalfUp(quantityMilli * unitPriceMinor, 1000)`
+3. `lineDiscountMinor = roundHalfUp(lineGrossMinor * discountBasisPoints, 10000)`
+4. `lineTotalMinor = lineGrossMinor - lineDiscountMinor`
 
-- неполный draft, который можно временно хранить в `localStorage`;
-- валидный расчет, который разрешено экспортировать или отправлять в backend;
-- валидный расчет, для которого разрешено формировать PDF.
+Для всего расчёта:
 
-Неполный draft может содержать пустые поля и промежуточные значения UI. Он не должен считаться готовым расчетом.
+5. `subtotalMinor = sum(lineTotalMinor)`
+6. `overallDiscountMinor = roundHalfUp(subtotalMinor * overallDiscountBasisPoints, 10000)`
+7. `amountAfterDiscountMinor = subtotalMinor - overallDiscountMinor`
+8. `taxMinor = roundHalfUp(amountAfterDiscountMinor * taxBasisPoints, 10000)`
+9. `totalMinor = amountAfterDiscountMinor + taxMinor`
 
-## Примеры для будущих fixtures
+Округление выполняется только в явно перечисленных точках. Backend повторяет расчёт самостоятельно и является окончательной точкой проверки перед PDF generation.
 
-### 1. Обычная позиция без скидки и налога
+## Golden fixtures
 
-Input:
+Обязательные сценарии:
 
-- `quantity`: `2`;
-- `unitPriceMinor`: `150000`;
-- `discountBasisPoints`: `0`;
-- `overallDiscountBasisPoints`: `0`;
-- `taxBasisPoints`: `0`.
+| Сценарий | Input | Expected |
+|---|---|---|
+| Без скидки | quantity `2`, price `150000` | gross/total `300000` |
+| Дробное количество | quantity `1.5`, price `100000` | gross `150000` |
+| Округление gross | quantity `0.5`, price `1` | gross `1` |
+| Скидка позиции | gross `100000`, rate `1500` | discount `15000`, total `85000` |
+| Half-up скидки | gross `1`, rate `5000` | discount `1`, total `0` |
+| Общая скидка | subtotal `200000`, rate `1000` | discount `20000`, after `180000` |
+| Налог после скидки | after `180000`, rate `2000` | tax `36000`, total `216000` |
+| Скидка 100% | gross `100000`, rate `10000` | total `0` |
+| Несколько позиций | totals `100000,250000,50000` | subtotal `400000` |
 
-Expected:
+Также обязательны invalid fixtures: пустой массив, отрицательные значения, дробные basis points, malformed quantity, более трёх знаков после запятой, более 100 позиций, неизвестная `schemaVersion` и превышение `MAX_SAFE_MINOR`.
 
-- `lineGross`: `300000`;
-- `lineDiscount`: `0`;
-- `lineTotal`: `300000`;
-- `subtotal`: `300000`;
-- `total`: `300000`.
+## Состояния
 
-### 2. Позиция с дробным количеством
-
-Input:
-
-- `quantity`: `1.5`;
-- `unitPriceMinor`: `100000`;
-- `discountBasisPoints`: `0`.
-
-Expected:
-
-- `lineGross`: `150000`;
-- `lineDiscount`: `0`;
-- `lineTotal`: `150000`.
-
-### 3. Скидка позиции
-
-Input:
-
-- `quantity`: `1`;
-- `unitPriceMinor`: `100000`;
-- `discountBasisPoints`: `1500`.
-
-Expected:
-
-- `lineGross`: `100000`;
-- `lineDiscount`: `15000`;
-- `lineTotal`: `85000`.
-
-### 4. Общая скидка
-
-Input:
-
-- `subtotal`: `200000`;
-- `overallDiscountBasisPoints`: `1000`.
-
-Expected:
-
-- `overallDiscount`: `20000`;
-- `amountAfterDiscount`: `180000`.
-
-### 5. Налог после общей скидки
-
-Input:
-
-- `amountAfterDiscount`: `180000`;
-- `taxBasisPoints`: `2000`.
-
-Expected:
-
-- `taxAmount`: `36000`;
-- `total`: `216000`.
-
-### 6. Проверка `ROUND_HALF_UP`
-
-Input:
-
-- `quantity`: `1`;
-- `unitPriceMinor`: `1`;
-- `discountBasisPoints`: `5000`.
-
-Expected:
-
-- `lineGross`: `1`;
-- `lineDiscount`: `1`;
-- `lineTotal`: `0`.
-
-Половина копейки округляется вверх.
-
-### 7. Несколько позиций
-
-Input:
-
-- item A `lineTotal`: `100000`;
-- item B `lineTotal`: `250000`;
-- item C `lineTotal`: `50000`.
-
-Expected:
-
-- `subtotal`: `400000`.
-
-### 8. Скидка 100%
-
-Input:
-
-- `lineGross`: `100000`;
-- `discountBasisPoints`: `10000`.
-
-Expected:
-
-- `lineDiscount`: `100000`;
-- `lineTotal`: `0`.
-
-### 9. Пустой draft
-
-Пустой draft может существовать в `localStorage`, но не является валидным расчетом для export, backend preview или PDF generation.
-
-### 10. Некорректные отрицательные значения
-
-Отрицательные `quantity`, `unitPriceMinor`, `discountBasisPoints` или `taxBasisPoints` должны приводить к validation error.
+Неполный draft разрешено хранить в `localStorage`. Для calculation preview требуется минимум одна полностью валидная позиция. Для PDF дополнительно требуется непустой `projectName`. Невалидные входные данные не должны давать частично доверенный итог.
