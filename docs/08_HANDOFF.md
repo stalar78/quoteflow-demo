@@ -2,72 +2,39 @@
 
 ## Текущий статус
 
-Проект находится на Этапе 1: `architecture and documentation stage`.
+Этап 1 завершён. Документация находится в приватном репозитории `stalar78/quoteflow-demo` и прошла первичное архитектурное, продуктовый и security review.
 
-Создана проектная документация. Frontend, backend, тесты, зависимости, Docker-конфигурация и deployment не создавались.
+Frontend, backend, зависимости, tests, fixtures, Docker и deployment ещё не созданы.
 
 ## Принятые решения
 
-- `QuoteFlow` — самостоятельный проект.
-- Проект является собственным демонстрационным продуктом Stalar Vision.
-- Нельзя позиционировать проект как клиентский кейс.
-- Предварительное имя будущего GitHub repository: `stalar78/quoteflow-demo`.
-- GitHub repository пока не создается.
-- Drafts хранятся только в `localStorage`.
-- Ключ draft storage: `quoteflow:drafts:v1`.
-- Backend планируется stateless.
-- Server storage в MVP отсутствует.
-- Основная валюта MVP: `RUB`.
-- Денежные значения хранятся в копейках.
-- Скидки и налог хранятся в basis points.
-- Округление: `ROUND_HALF_UP`.
+- QuoteFlow — собственный демонстрационный продукт Stalar Vision, не клиентский кейс.
+- Frontend: React, TypeScript, Vite, Tailwind CSS, Vitest, Testing Library.
+- Backend: FastAPI, Pydantic, pytest; backend stateless.
+- Draft storage: только `localStorage`, ключ `quoteflow:drafts:v1`.
+- Server database отсутствует.
+- Валюта: `RUB`; деньги — целые копейки.
+- Quantity — decimal string с тремя знаками точности.
+- Rates — integer basis points.
+- Округление — `ROUND_HALF_UP`.
+- Frontend использует exact-integer arithmetic; backend — Python `int`.
+- Общие golden fixtures обязательны.
+- Лицензия, public repository и production deployment требуют отдельного решения.
 
-## Созданные документы
+## Следующий этап
 
-- `README.md`
-- `docs/00_PROJECT_CONTEXT.md`
-- `docs/01_PRODUCT_REQUIREMENTS.md`
-- `docs/02_ARCHITECTURE.md`
-- `docs/03_CALCULATION_MODEL.md`
-- `docs/04_DATA_MODEL.md`
-- `docs/05_API_CONTRACT.md`
-- `docs/06_SECURITY.md`
-- `docs/07_ROADMAP.md`
-- `docs/08_HANDOFF.md`
+Этап 2 включает scaffold frontend/backend, конфигурацию проверок, synthetic fixtures, calculation core, tests и два базовых API endpoints.
 
-## Еще не реализовано
+Не входят в Этап 2:
 
-- frontend scaffold;
-- backend scaffold;
-- package manager configuration;
-- Python environment;
-- dependencies;
-- calculation implementation;
-- tests;
-- fixtures;
-- JSON import/export;
-- CSV export;
-- API endpoints;
-- PDF generation;
-- Docker configuration;
-- production build;
-- GitHub publication;
+- продуктовый UI;
+- draft management;
+- JSON/CSV export;
+- PDF;
+- Docker Compose;
 - deployment.
 
-## Ограничения
-
-- Не использовать реальные персональные, коммерческие или конфиденциальные данные.
-- Не создавать клиентские истории, отзывы или неподтвержденные метрики.
-- Не добавлять лицензию без отдельного решения.
-- Не создавать remote без review.
-- Не выполнять commit, push, GitHub publication или deployment без review.
-- Не изменять файлы за пределами каталога QuoteFlow.
-
-## Следующий предполагаемый этап
-
-Этап 2: scaffold frontend/backend, конфигурация проверок, synthetic fixtures, calculation core и unit tests.
-
-Перед началом Этапа 2 следующий исполнитель должен прочитать:
+## Обязательное чтение для Codex
 
 - `README.md`
 - `docs/00_PROJECT_CONTEXT.md`
@@ -79,14 +46,22 @@
 - `docs/06_SECURITY.md`
 - `docs/07_ROADMAP.md`
 - `docs/08_HANDOFF.md`
+- `docs/09_WORKFLOW.md`
 
-## Запреты перед review
+## Разделение ответственности
 
-До отдельного review запрещены:
+Codex изменяет код, tests, fixtures и необходимые технические конфигурации. Codex не изменяет `README.md` или `docs/**`.
 
-- commit;
-- push;
-- создание remote;
-- создание GitHub repository;
-- production deployment;
-- публикация проекта как готового продукта.
+GPT проводит review фактически отправленного кода и самостоятельно ведёт документацию непосредственно в GitHub.
+
+Владелец проверяет результат Codex и выполняет локальные commit/push только после review.
+
+## Обязательные ограничения
+
+- не менять `site-stalarvision`;
+- не использовать реальные данные;
+- не добавлять лицензию;
+- не создавать public deployment;
+- не добавлять зависимости вне согласованного scope;
+- не выполнять commit или push из Codex;
+- не изменять `README.md` и `docs/**` из Codex.
