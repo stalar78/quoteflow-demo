@@ -1,83 +1,78 @@
 # 05. API Contract
 
-Документ описывает планируемый backend contract. Endpoints в этом документе не являются реализованными на Этапе 1.
+Документ описывает планируемый backend contract. Endpoints ещё не реализованы.
 
 ## Общие правила
 
-- API versioning выполняется через `/api/v1`.
-- Основной формат request/response: JSON.
-- Validation errors должны иметь единый формат.
-- Каждый backend response может содержать `requestId`, не связанный с персональными данными.
-- JSON request size должен быть ограничен.
-- Максимум `100` позиций в расчете.
-- Backend не должен доверять итоговым суммам, присланным frontend.
-- Backend всегда пересчитывает totals самостоятельно.
-- Произвольные webhook URL отсутствуют.
-- Внешняя отправка данных отсутствует.
-- Authentication в MVP отсутствует, потому что пользовательские аккаунты не входят в scope.
-- Ограничения public demo должны быть описаны отдельно в UI и документации.
+- API versioning: `/api/v1`.
+- JSON request/response использует UTF-8.
+- Максимальный request body: `256 KiB`.
+- Максимум 100 позиций.
+- Неизвестные поля отклоняются.
+- Backend не принимает totals во входной модели и всегда пересчитывает их самостоятельно.
+- Все ответы получают технический `requestId`; он также возвращается в `X-Request-ID`.
+- Request body и пользовательский текст не логируются.
+- Authentication, drafts endpoints, внешняя отправка и произвольные webhook URL в MVP отсутствуют.
 
-## `GET /api/health`
+## GET /api/health
 
-Назначение: проверка доступности backend.
-
-Планируемый response:
+Response `200`:
 
 ```json
 {
   "status": "ok",
   "service": "quoteflow-api",
-  "requestId": "demo-request-id"
+  "requestId": "generated-id"
 }
 ```
 
-## `POST /api/v1/calculations/preview`
+## POST /api/v1/calculations/preview
 
-Назначение:
+Request body — непосредственно `QuoteCalculationInput` из `04_DATA_MODEL.md`.
 
-- принять валидный расчет;
-- повторно проверить входные данные;
-- выполнить расчет;
-- вернуть нормализованный breakdown.
-
-Планируемый request body должен соответствовать `QuoteCalculationDraft` или отдельной normalized input model, если она будет выделена при реализации.
-
-Планируемый successful response:
+Response `200`:
 
 ```json
 {
-  "requestId": "demo-request-id",
+  "requestId": "generated-id",
   "calculation": {
-    "items": [],
-    "subtotalMinor": 0,
+    "items": [
+      {
+        "itemId": "item-1",
+        "lineGrossMinor": 100000,
+        "lineDiscountMinor": 0,
+        "lineTotalMinor": 100000
+      }
+    ],
+    "subtotalMinor": 100000,
     "overallDiscountMinor": 0,
-    "amountAfterDiscountMinor": 0,
+    "amountAfterDiscountMinor": 100000,
     "taxMinor": 0,
-    "totalMinor": 0,
+    "totalMinor": 100000,
     "currency": "RUB",
-    "calculationVersion": "v1"
+    "calculationVersion": "1"
   }
 }
 ```
 
-## `POST /api/v1/documents/pdf`
+## POST /api/v1/documents/pdf
 
-Назначение:
+Request body — `QuoteCalculationInput`, дополнительно удовлетворяющий document validation: непустой `projectName`.
 
-- принять валидный расчет;
-- повторно выполнить расчет на backend;
-- сформировать PDF;
-- вернуть `application/pdf`.
+Backend повторно валидирует данные и выполняет расчёт. Response `200`:
 
-PDF generation планируется на более позднем этапе. Перед созданием PDF backend должен пересчитать totals и использовать только валидированные данные.
+- `Content-Type: application/pdf`;
+- `Content-Disposition` с безопасным ASCII filename;
+- `X-Request-ID`;
+- PDF body.
 
-## Validation error format
+Backend не принимает HTML template или filename от пользователя.
 
-Планируемый формат:
+## Error envelope
 
 ```json
 {
-  "requestId": "demo-request-id",
+  "requestId": "generated-id",
   "error": {
     "code": "VALIDATION_ERROR",
     "message": "Input validation failed",
@@ -92,6 +87,14 @@ PDF generation планируется на более позднем этапе.
 }
 ```
 
-## Drafts and export
+Планируемые статусы:
 
-Drafts не имеют backend endpoints. JSON import/export и CSV export выполняются на frontend.
+- `400`: malformed JSON;
+- `413`: request too large;
+- `422`: schema or calculation validation error;
+- `429`: rate limit exceeded в public deployment;
+- `500`: безопасная внутренняя ошибка без stack trace.
+
+## Frontend-only operations
+
+Черновики, JSON import/export и CSV export не имеют backend endpoints.
