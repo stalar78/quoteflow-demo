@@ -6,19 +6,30 @@ QuoteFlow — калькулятор сметы и генератор комме
 
 ## Практическая задача
 
-QuoteFlow должен позволить подготовить расчёт по позициям, применить скидки и пользовательскую налоговую ставку, сохранить черновик в браузере, экспортировать структурированные данные и сформировать коммерческое предложение в PDF.
+QuoteFlow позволяет подготовить локальный расчёт по позициям, применить скидки и пользовательскую налоговую ставку, увидеть итог и сохранить черновик в браузере. Следующие этапы добавят экспорт структурированных данных и формирование коммерческого предложения в PDF.
 
 Приложение является демонстрационным инструментом, не заменяет бухгалтерское или юридическое сопровождение и не предназначено для реальных персональных, коммерческих или конфиденциальных данных. Расчёты необходимо проверять.
 
 ## Реализовано
 
-- React + TypeScript + Vite frontend scaffold;
+- responsive React + TypeScript + Vite интерфейс;
+- Tailwind CSS;
+- поля проекта и условных данных клиента;
+- динамические позиции;
+- локальная validation с touched-field UX;
+- точный локальный расчёт без floating-point арифметики;
+- точное форматирование денежных значений во всём поддерживаемом диапазоне;
+- итоговая панель и line totals;
+- сохранение, открытие, удаление и полная очистка черновиков через `localStorage`;
+- изолированный versioned storage key `quoteflow:drafts:v1`;
+- видимые demo/privacy предупреждения;
+- keyboard/focus и базовый accessibility слой;
 - FastAPI backend scaffold;
 - точное расчётное ядро на TypeScript `bigint` и Python `int`;
 - документированный `ROUND_HALF_UP`;
 - общие synthetic golden/invalid fixtures;
-- frontend unit tests;
-- backend calculation и API tests;
+- 64 frontend tests;
+- 63 backend tests;
 - `GET /api/health`;
 - `POST /api/v1/calculations/preview`;
 - строгая input validation и стабильные error codes;
@@ -29,9 +40,8 @@ QuoteFlow должен позволить подготовить расчёт п
 
 ## Ещё не реализовано
 
-- продуктовый интерфейс калькулятора;
-- draft management в `localStorage`;
 - JSON/CSV import/export;
+- backend integration из UI;
 - PDF generation;
 - print-friendly representation;
 - Docker Compose;
@@ -39,7 +49,7 @@ QuoteFlow должен позволить подготовить расчёт п
 
 ## Стек
 
-- Frontend: React 19, TypeScript, Vite, Vitest, Testing Library.
+- Frontend: React 19, TypeScript, Vite, Tailwind CSS, Vitest, Testing Library.
 - Backend: Python 3.12+, FastAPI, Pydantic, pytest.
 - Draft storage: только браузерный `localStorage`.
 - Server storage: в MVP отсутствует.
@@ -68,7 +78,9 @@ python -m uvicorn app.main:app --reload
 
 ## Статус
 
-Этапы 0–2 завершены. Следующий этап — основной responsive UI, локальный расчёт и управление черновиками.
+Этапы 0–3 завершены. Следующий этап — PDF technical spike, безопасная генерация PDF и print-friendly representation.
+
+Проверенный implementation commit Этапа 3: `8fec0b323bc31c9e5e10d8870f80e087fa6afed0`.
 
 Репозиторий пока остаётся приватным. Лицензия, публичная публикация и production deployment требуют отдельного review.
 
