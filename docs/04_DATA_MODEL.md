@@ -19,21 +19,40 @@ type QuoteCalculationInput = {
 };
 ```
 
-## QuoteCalculationDraft
+## EditableDraft
 
-Локальный черновик расширяет input метаданными:
+UI использует отдельную модель черновика со строковыми значениями, которые могут быть пустыми или промежуточными:
 
 ```ts
-type QuoteCalculationDraft = QuoteCalculationInput & {
+type EditableDraft = {
+  storageVersion: "1";
   id: string;
+  projectName: string;
+  clientDisplayName: string;
+  clientContactNote: string;
+  comment: string;
+  items: EditableItem[];
+  overallDiscountPercentText: string;
+  taxMode: "none" | "custom";
+  taxRatePercentText: string;
   createdAt: string;
   updatedAt: string;
 };
+
+type EditableItem = {
+  id: string;
+  name: string;
+  description: string;
+  quantityText: string;
+  unit: string;
+  unitPriceRublesText: string;
+  discountPercentText: string;
+};
 ```
 
-Draft state в UI может временно содержать строки, ещё не прошедшие строгую схему. Перед export, preview или PDF он нормализуется в `QuoteCalculationInput`.
+Перед calculation, export, preview или PDF editable draft должен быть нормализован в `QuoteCalculationInput`. Сохранение локального draft не требует прохождения строгой calculation schema.
 
-## Supporting types
+## Supporting strict types
 
 ```ts
 type QuoteClient = {
@@ -88,21 +107,39 @@ type CalculationResult = {
 - `items[].discountBasisPoints`, `overallDiscountBasisPoints`, `taxBasisPoints`: целые числа от 0 до 10000.
 - `comment`: от 0 до 2000.
 - `createdAt`, `updatedAt`: UTC ISO 8601.
-- неизвестные поля отклоняются;
-- повторяющиеся item IDs отклоняются;
+- неизвестные strict-input поля отклоняются;
+- повторяющиеся item IDs в strict input отклоняются;
 - итоговые суммы никогда не принимаются во входной модели.
 
 ## Normalization
 
-- значения строк trim-ятся на границе strict input;
+- пользовательские строки trim-ятся на границе strict input;
 - пустые optional strings становятся `""`;
+- ruble strings преобразуются в integer kopecks без floating point;
+- percent strings преобразуются в basis points без floating point;
 - quantity преобразуется в каноническую десятичную строку;
+- запятая в UI принимается и нормализуется в точку;
+- scientific notation и лишняя precision отклоняются;
 - порядок items сохраняется;
-- import с неизвестной `schemaVersion` завершается понятной ошибкой;
-- миграции между версиями не выполняются молча.
+- несовместимые версии storage/import не мигрируют молча.
 
-## Draft storage
+## Draft storage envelope
 
-Ключ: `quoteflow:drafts:v1`.
+Ключ:
 
-Хранилище должно поддерживать список, сохранение, открытие, удаление одного draft и полную очистку. Оно не синхронизируется с backend и не считается долговременным или конфиденциальным хранилищем.
+```text
+quoteflow:drafts:v1
+```
+
+Формат:
+
+```ts
+type DraftEnvelope = {
+  storageVersion: "1";
+  drafts: EditableDraft[];
+};
+```
+
+Реализованы список, сохранение/upsert, открытие, удаление одного draft и полная очистка только ключа QuoteFlow. Storage exceptions перехватываются, некорректный JSON не приводит к падению UI, а структурно некорректные drafts пропускаются с предупреждением.
+
+Хранилище не синхронизируется с backend и не считается долговременным или конфиденциальным.
