@@ -2,34 +2,31 @@
 
 ## Текущий статус
 
-Этап 1 завершён. Документация находится в приватном репозитории `stalar78/quoteflow-demo` и прошла первичное архитектурное, продуктовый и security review.
+Этап 2 завершён и проверен. Implementation commit:
 
-Frontend, backend, зависимости, tests, fixtures, Docker и deployment ещё не созданы.
+`fb120b32681da74fa7c929b6a9a6541567af0a26`
 
-## Принятые решения
+Реализованы frontend/backend scaffolds, exact calculation core, shared fixtures, tests и первые API endpoints. Production UI, drafts, export, PDF, Docker и deployment ещё отсутствуют.
 
-- QuoteFlow — собственный демонстрационный продукт Stalar Vision, не клиентский кейс.
-- Frontend: React, TypeScript, Vite, Tailwind CSS, Vitest, Testing Library.
-- Backend: FastAPI, Pydantic, pytest; backend stateless.
-- Draft storage: только `localStorage`, ключ `quoteflow:drafts:v1`.
-- Server database отсутствует.
-- Валюта: `RUB`; деньги — целые копейки.
-- Quantity — decimal string с тремя знаками точности.
-- Rates — integer basis points.
-- Округление — `ROUND_HALF_UP`.
-- Frontend использует exact-integer arithmetic; backend — Python `int`.
-- Общие golden fixtures обязательны.
-- Лицензия, public repository и production deployment требуют отдельного решения.
+## Проверенное состояние
+
+- frontend: 30 tests, production build и type-check проходят;
+- backend: 63 tests и application import/startup check проходят;
+- TypeScript использует `bigint`, Python — `int`;
+- общие fixtures подтверждают одинаковую расчётную семантику;
+- request body limit проверяет фактические ASGI chunks;
+- request ID валидируется;
+- staging и patch прошли whitespace review;
+- реальных данных и секретов не добавлено.
 
 ## Следующий этап
 
-Этап 2 включает scaffold frontend/backend, конфигурацию проверок, synthetic fixtures, calculation core, tests и два базовых API endpoints.
+Этап 3: основной responsive UI, локальный расчёт и draft management.
 
-Не входят в Этап 2:
+Не входят в Этап 3:
 
-- продуктовый UI;
-- draft management;
 - JSON/CSV export;
+- backend preview integration;
 - PDF;
 - Docker Compose;
 - deployment.
@@ -50,18 +47,19 @@ Frontend, backend, зависимости, tests, fixtures, Docker и deployment
 
 ## Разделение ответственности
 
-Codex изменяет код, tests, fixtures и необходимые технические конфигурации. Codex не изменяет `README.md` или `docs/**`.
+Codex изменяет code, tests, fixtures, styles и необходимые technical configuration files. Codex не изменяет `README.md` или `docs/**`.
 
-GPT проводит review фактически отправленного кода и самостоятельно ведёт документацию непосредственно в GitHub.
+GPT проводит review кода из GitHub и самостоятельно ведёт документацию.
 
-Владелец проверяет результат Codex и выполняет локальные commit/push только после review.
+Владелец выполняет commit/push только после review и затем синхронизирует документационные commits GPT.
 
-## Обязательные ограничения
+## Постоянные ограничения
 
 - не менять `site-stalarvision`;
 - не использовать реальные данные;
 - не добавлять лицензию;
-- не создавать public deployment;
+- не публиковать repository;
+- не выполнять deployment;
 - не добавлять зависимости вне согласованного scope;
-- не выполнять commit или push из Codex;
+- не выполнять commit/push из Codex;
 - не изменять `README.md` и `docs/**` из Codex.
