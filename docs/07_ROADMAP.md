@@ -22,7 +22,7 @@
 - FastAPI scaffold;
 - exact-integer calculation core во frontend и backend;
 - shared golden/invalid fixtures;
-- 30 frontend tests;
+- 30 frontend calculation-core tests;
 - 63 backend tests;
 - health и calculation preview endpoints;
 - strict validation и stable error codes;
@@ -33,29 +33,47 @@
 
 ## Этап 3 — основной UI и черновики
 
+Статус: **завершён**.
+
+Реализованы:
+
+- деловой responsive layout;
+- Tailwind CSS;
+- project/client fields;
+- dynamic items;
+- локальная validation с touched-field UX;
+- локальный exact-integer calculation result;
+- точное форматирование денег на всём поддерживаемом диапазоне;
+- sticky summary на desktop;
+- draft list/save/open/delete/clear через `localStorage`;
+- versioned storage envelope `quoteflow:drafts:v1`;
+- видимое demo/privacy предупреждение;
+- keyboard navigation, focus states и accessibility baseline;
+- responsive/mobile correction pass;
+- 64 frontend tests;
+- успешные production build и TypeScript check.
+
+Проверенный implementation commit: `8fec0b323bc31c9e5e10d8870f80e087fa6afed0`.
+
+Не реализованы на этом этапе: JSON/CSV export, backend integration, PDF, Docker и deployment.
+
+## Этап 4 — PDF
+
 Статус: **следующий**.
 
 План:
 
-- деловой responsive layout;
-- project/client fields;
-- dynamic items;
-- локальная validation и понятные ошибки;
-- локальный calculation result;
-- sticky summary на desktop;
-- draft list/save/open/delete/clear через `localStorage`;
-- видимое demo/privacy предупреждение;
-- keyboard navigation, focus states и accessibility baseline;
-- UI/component tests.
-
-Не входят: JSON/CSV export, backend integration, PDF, Docker и deployment.
-
-## Этап 4 — PDF
-
-- technical spike и выбор библиотеки;
-- русский текст, переносы и многостраничность;
+- technical spike и документированный выбор библиотеки;
+- print-friendly representation;
 - безопасная PDF generation;
-- print-friendly representation.
+- русский текст и шрифты;
+- перенос длинного текста;
+- многостраничные документы;
+- корректные деньги, скидки и налог;
+- synthetic demo content;
+- тесты PDF boundary и smoke verification.
+
+Не входят без отдельного согласования: JSON/CSV export, отправка документов, Docker и deployment.
 
 ## Этап 5 — export и API integration
 
