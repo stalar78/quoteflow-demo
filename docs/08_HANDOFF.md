@@ -2,34 +2,54 @@
 
 ## Текущий статус
 
-Этап 2 завершён и проверен. Implementation commit:
+Этап 3 завершён и проверен. Implementation commit:
 
-`fb120b32681da74fa7c929b6a9a6541567af0a26`
+`8fec0b323bc31c9e5e10d8870f80e087fa6afed0`
 
-Реализованы frontend/backend scaffolds, exact calculation core, shared fixtures, tests и первые API endpoints. Production UI, drafts, export, PDF, Docker и deployment ещё отсутствуют.
+Реализованы responsive product UI, editable draft state, локальная validation, exact local calculation, summary и управление browser drafts. JSON/CSV export, UI-to-backend integration, PDF, Docker и deployment ещё отсутствуют.
 
 ## Проверенное состояние
 
-- frontend: 30 tests, production build и type-check проходят;
+- frontend: 64 tests, production build и type-check проходят;
 - backend: 63 tests и application import/startup check проходят;
-- TypeScript использует `bigint`, Python — `int`;
-- общие fixtures подтверждают одинаковую расчётную семантику;
+- TypeScript calculation core использует `bigint`, Python — `int`;
+- UI adapters преобразуют ruble/percent strings точной integer arithmetic;
+- денежное форматирование не делит minor units через floating point;
+- общие fixtures подтверждают одинаковую расчётную семантику frontend/backend;
+- responsive UI проверен на desktop, tablet и mobile screenshots;
+- untouched fields остаются нейтральными, ошибки появляются после blur и очищаются после исправления;
+- drafts сохраняются только в `quoteflow:drafts:v1`;
+- storage parsing/version/write failures обрабатываются безопасно;
+- удаление и очистка не затрагивают другие localStorage keys;
 - request body limit проверяет фактические ASGI chunks;
 - request ID валидируется;
 - staging и patch прошли whitespace review;
-- реальных данных и секретов не добавлено.
+- реальных данных и секретов не добавлено;
+- working tree владельца после push был чистым.
 
 ## Следующий этап
 
-Этап 3: основной responsive UI, локальный расчёт и draft management.
+Этап 4: PDF technical spike, print-friendly representation и безопасная PDF generation.
 
-Не входят в Этап 3:
+Минимальные задачи Этапа 4:
 
-- JSON/CSV export;
-- backend preview integration;
-- PDF;
+- выбрать и обосновать PDF library;
+- определить, выполняется ли PDF generation на backend;
+- использовать пользовательский текст только как данные;
+- обеспечить русский текст и лицензируемый шрифт;
+- поддержать длинные строки и несколько страниц;
+- не принимать произвольный template, URL или filesystem path;
+- добавить synthetic PDF tests и smoke verification;
+- сохранить exact calculation semantics.
+
+Не входят в Этап 4 без отдельного согласования:
+
+- JSON/CSV import/export;
+- произвольная внешняя отправка;
+- email, Telegram или webhooks;
 - Docker Compose;
-- deployment.
+- deployment;
+- публикация репозитория.
 
 ## Обязательное чтение для Codex
 
