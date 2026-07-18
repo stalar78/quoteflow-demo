@@ -5,14 +5,28 @@
 ```text
 frontend/
   src/
+    components/
+      AppHeader.tsx
+      DemoNotice.tsx
+      Field.tsx
     features/
       calculation/
+        CalculationForm.tsx
+        ItemsEditor.tsx
+        SummaryPanel.tsx
         calculate.ts
         calculate.test.ts
+        editableTypes.ts
         errors.ts
+        inputAdapters.ts
         types.ts
+      drafts/
+        DraftsPanel.tsx
+        draftStorage.ts
+    App.test.tsx
     App.tsx
     main.tsx
+    styles.css
   package.json
   vite.config.ts
   tsconfig*.json
@@ -44,18 +58,22 @@ docs/
 
 ## Frontend boundary
 
-Frontend реализован как React + TypeScript приложение на Vite. На текущем этапе он содержит минимальный placeholder и отдельное расчётное ядро.
+Frontend реализован как responsive React + TypeScript приложение на Vite с Tailwind CSS.
 
-Реализовано:
+UI-слой отвечает за:
 
-- строгие calculation types;
-- runtime validation;
-- парсинг decimal-string quantity;
-- exact-integer arithmetic через `bigint`;
-- стабильные domain errors;
-- тесты на общих fixtures.
+- editable draft state со строковыми промежуточными значениями;
+- project/client fields и динамические позиции;
+- touched-field validation без преждевременного показа ошибок;
+- нормализацию UI-значений в строгий `QuoteCalculationInput`;
+- точный локальный расчёт через существующий calculation core;
+- точное форматирование minor units без floating point;
+- line totals и итоговую панель;
+- локальное управление черновиками;
+- demo/privacy предупреждения;
+- keyboard/focus и базовый accessibility слой.
 
-Следующий UI-слой будет отвечать за форму, локальную предварительную validation, быстрый расчёт, draft management и будущие export/API actions. Frontend не считается доверенной стороной.
+Editable draft отделён от strict calculation input. Денежные и процентные строки преобразуются через разбор строки и `BigInt`; quantity нормализуется в каноническую decimal string. Frontend не считается доверенной стороной.
 
 ## Backend boundary
 
@@ -73,37 +91,44 @@ Backend реализован как stateless FastAPI service.
 - фактический request-body limit;
 - safe internal-error response.
 
-Backend не хранит расчёты, черновики или документы.
+Backend не хранит расчёты, черновики или документы. Stage 3 UI пока не вызывает backend endpoint.
 
 ## Browser storage boundary
 
-Черновики ещё не реализованы. Для Этапа 3 зафиксирован ключ:
+Черновики реализованы через единственный versioned key:
 
 ```text
 quoteflow:drafts:v1
 ```
 
-Черновики будут существовать только в браузере, поддерживать удаление и полную очистку, не синхронизироваться с backend и не позиционироваться как надёжное или конфиденциальное хранилище.
+Storage layer:
+
+- безопасно разбирает JSON;
+- проверяет версию envelope;
+- фильтрует структурно некорректные drafts;
+- перехватывает ошибки чтения и записи;
+- сохраняет и обновляет draft по ID;
+- сохраняет `createdAt` и обновляет `updatedAt`;
+- удаляет один draft;
+- очищает только ключ QuoteFlow и не вызывает `localStorage.clear()`.
+
+Черновики существуют только в текущем браузере, не синхронизируются с backend и не являются надёжным или конфиденциальным хранилищем.
 
 ## Calculation consistency
 
-TypeScript и Python реализации используют одну формулу, одинаковые лимиты и общие JSON fixtures. Денежные вычисления не опираются на floating point. Backend всегда пересчитывает totals самостоятельно.
+TypeScript и Python реализации используют одну формулу, одинаковые лимиты и общие JSON fixtures. Денежные вычисления и UI-formatting не опираются на floating point. Backend всегда пересчитывает totals самостоятельно.
 
-## Поток данных
+## Поток данных Stage 3
 
-Текущий поток:
+1. Пользователь редактирует `EditableDraft`.
+2. UI сохраняет промежуточные строковые значения.
+3. После blur touched fields получают локальные ошибки.
+4. Adapter нормализует валидные значения в `QuoteCalculationInput`.
+5. Frontend выполняет локальный exact-integer расчёт.
+6. UI показывает line totals и summary.
+7. Draft может быть сохранён в versioned `localStorage` envelope.
+8. Открытие нового, demo или сохранённого draft сбрасывает touched-state.
 
-1. Strict input поступает в calculation core или preview endpoint.
-2. Входные данные валидируются.
-3. Quantity переводится в целый `quantityMilli`.
-4. Totals вычисляются exact-integer алгоритмом.
-5. Возвращается нормализованный `CalculationResult`.
+## Следующие архитектурные границы
 
-Будущий UI-поток:
-
-1. Пользователь редактирует draft.
-2. UI хранит промежуточные строковые значения.
-3. Draft нормализуется в strict input.
-4. Frontend выполняет локальный расчёт.
-5. Draft может сохраняться в `localStorage`.
-6. На более позднем этапе strict input отправляется на backend preview или PDF.
+Этап 4 добавит print-friendly representation и PDF generation. PDF не должен принимать произвольный HTML, template или filesystem path. Backend integration, JSON/CSV import/export и payload preview остаются задачами последующих этапов.
