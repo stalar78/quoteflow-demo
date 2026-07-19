@@ -14,6 +14,7 @@ type CalculationFormProps = {
   onAddItem: () => void;
   onRemoveItem: (id: string) => void;
   onFillDemo: () => void;
+  onPrint: () => void;
 };
 
 function updateDraftField<K extends keyof EditableDraft>(
@@ -33,10 +34,12 @@ export function CalculationForm({
   onFieldBlur,
   onAddItem,
   onRemoveItem,
-  onFillDemo
+  onFillDemo,
+  onPrint
 }: CalculationFormProps) {
   const errors = calculation.fieldErrors;
   const getFieldError = (field: string) => (touchedFields.has(field) ? errors[field] : undefined);
+  const canPrint = calculation.ok && calculation.input.projectName.trim() !== "";
 
   return (
     <div className="flex min-w-0 flex-col gap-7">
@@ -50,13 +53,24 @@ export function CalculationForm({
               Работайте с черновиком локально: данные не отправляются на сервер.
             </p>
           </div>
-          <button
-            className="min-h-11 shrink-0 rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-[15px] font-semibold text-slate-800 transition hover:bg-slate-50"
-            type="button"
-            onClick={onFillDemo}
-          >
-            Заполнить демо-пример
-          </button>
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end md:max-w-[360px] lg:max-w-none">
+            <button
+              className="min-h-11 shrink-0 whitespace-nowrap rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-[15px] font-semibold text-slate-800 transition hover:bg-slate-50"
+              type="button"
+              onClick={onFillDemo}
+            >
+              Заполнить демо-пример
+            </button>
+            {canPrint ? (
+              <button
+                className="min-h-11 shrink-0 whitespace-nowrap rounded-lg bg-teal-700 px-5 py-2.5 text-[15px] font-semibold text-white shadow-sm transition hover:bg-teal-800"
+                type="button"
+                onClick={onPrint}
+              >
+                Печать / сохранить PDF
+              </button>
+            ) : null}
+          </div>
         </div>
         <p
           className={[

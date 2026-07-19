@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from starlette.types import ASGIApp
 
 from app.api.routes.calculations import router as calculations_router
+from app.api.routes.documents import router as documents_router
 from app.api.routes.health import router as health_router
 from app.config import get_settings
 from app.core.calculation import normalize_error_code
@@ -129,6 +130,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(calculations_router)
+    app.include_router(documents_router)
 
     @app.exception_handler(CalculationError)
     async def calculation_error_handler(

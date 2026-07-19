@@ -9,6 +9,7 @@ import {
   type EditableDraft
 } from "./features/calculation/editableTypes";
 import { evaluateDraft } from "./features/calculation/inputAdapters";
+import { PrintDocument } from "./features/calculation/PrintDocument";
 import { SummaryPanel } from "./features/calculation/SummaryPanel";
 import { DraftsPanel } from "./features/drafts/DraftsPanel";
 import {
@@ -143,6 +144,10 @@ export function App() {
     [updateDraft]
   );
 
+  const printCalculation = useCallback(() => {
+    window.print();
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#f7f5f0] text-slate-900">
       <AppHeader onNew={startNew} />
@@ -157,6 +162,7 @@ export function App() {
             onDraftChange={setDraft}
             onFieldBlur={markFieldTouched}
             onFillDemo={fillDemo}
+            onPrint={printCalculation}
             onRemoveItem={removeItem}
             touchedFields={touchedFields}
           />
@@ -171,6 +177,7 @@ export function App() {
             />
           </aside>
         </div>
+        <PrintDocument calculation={calculation} draft={draft} />
       </main>
     </div>
   );

@@ -44,3 +44,114 @@ textarea:focus-visible {
     transition-duration: 0.01ms !important;
   }
 }
+
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .print-document,
+  .print-document * {
+    visibility: visible !important;
+  }
+
+  .print-document {
+    display: block !important;
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    background: #ffffff;
+    color: #000000;
+    font-family: Arial, sans-serif;
+    font-size: 10pt;
+    line-height: 1.35;
+  }
+
+  .print-document header,
+  .print-document .print-keep-block {
+    break-inside: avoid;
+    margin-bottom: 10mm;
+  }
+
+  .print-document .print-items-section {
+    margin-bottom: 10mm;
+  }
+
+  .print-document h1 {
+    margin: 0 0 2mm;
+    font-size: 22pt;
+  }
+
+  .print-document h2 {
+    margin: 0 0 3mm;
+    font-size: 13pt;
+  }
+
+  .print-document p {
+    margin: 0 0 3mm;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .print-document table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .print-document thead {
+    display: table-header-group;
+  }
+
+  .print-document tbody tr {
+    break-inside: avoid;
+  }
+
+  .print-document th,
+  .print-document td {
+    border: 1px solid #b8c1cc;
+    padding: 2.5mm;
+    text-align: left;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+  }
+
+  .print-document th {
+    background: #f1f5f9;
+    font-weight: 700;
+  }
+
+  .print-document td span {
+    display: block;
+    margin-top: 1.5mm;
+  }
+
+  .print-document dl {
+    margin: 0;
+    max-width: 80mm;
+  }
+
+  .print-document dl div {
+    display: flex;
+    justify-content: space-between;
+    gap: 8mm;
+    border-bottom: 1px solid #d5dbe3;
+    padding: 2mm 0;
+  }
+
+  .print-document dd {
+    margin: 0;
+    font-weight: 700;
+    text-align: right;
+  }
+}

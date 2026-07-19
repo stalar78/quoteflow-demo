@@ -22,6 +22,8 @@ coverage/
 .coverage
 htmlcov/
 frontend/coverage/
+backend/build/
+backend/dist/
 
 # Environment files
 .env

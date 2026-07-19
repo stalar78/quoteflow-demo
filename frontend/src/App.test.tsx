@@ -283,8 +283,8 @@ describe("QuoteFlow UI", () => {
     await user.clear(screen.getByLabelText("Ставка налога, %"));
     await user.type(screen.getByLabelText("Ставка налога, %"), "20");
 
-    expect(screen.getByText("1 080,00 ₽")).toBeInTheDocument();
-    expect(screen.getByText("180,00 ₽")).toBeInTheDocument();
+    expect(screen.getAllByText("1 080,00 ₽").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("180,00 ₽").length).toBeGreaterThan(0);
   });
 
   it("saves a draft", async () => {
