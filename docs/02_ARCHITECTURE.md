@@ -24,6 +24,12 @@ frontend/
       drafts/
         DraftsPanel.tsx
         draftStorage.ts
+      exchange/
+        DataExchangePanel.tsx
+        apiClient.ts
+        apiClient.test.ts
+        dataExchange.ts
+        dataExchange.test.ts
     App.test.tsx
     PrintDocument.test.tsx
     App.tsx
@@ -83,7 +89,11 @@ UI-слой отвечает за:
 - demo/privacy предупреждения;
 - keyboard/focus и базовый accessibility слой;
 - print-friendly representation только для валидного расчёта с непустым названием проекта;
-- вызов `window.print()` без сетевого обращения к backend.
+- вызов `window.print()` без сетевого обращения к backend;
+- versioned JSON import/export и CSV export;
+- read-only preview строгого payload;
+- явный calculation preview request с timeout, abort и stale-response protection;
+- отдельное сравнение backend result с локальным результатом без его замены.
 
 Editable draft отделён от strict calculation input. Денежные и процентные строки преобразуются через разбор строки и `BigInt`; quantity нормализуется в каноническую decimal string. Frontend не считается доверенной стороной.
 
@@ -104,13 +114,21 @@ Backend реализован как stateless FastAPI service.
 - фактический request-body limit;
 - safe internal-error response.
 
-Backend не хранит расчёты, черновики или документы. Stage 4 UI не вызывает backend endpoints: browser print и server PDF являются двумя отдельными, согласованными представлениями одного строгого расчёта.
+Backend не хранит расчёты, черновики или документы. Stage 5 UI явно вызывает только `/api/v1/calculations/preview`; browser print и server PDF остаются отдельными представлениями, а PDF endpoint из UI не вызывается.
 
 ## PDF generation boundary
 
 PDF создаётся на backend через ReportLab Platypus полностью в памяти (`BytesIO`). Endpoint принимает только существующий строгий `QuoteCalculationInput`, требует непустой `projectName`, повторно вычисляет totals через `calculate_quote` и не принимает HTML, template, URL, filename или filesystem path.
 
 Пользовательский текст экранируется перед передачей в markup-aware ReportLab objects. В PDF встраиваются DejaVu Sans и DejaVu Sans Bold с сохранённым license-файлом; package-data проверена сборкой и установкой wheel вне source checkout. Ответ имеет фиксированное имя `quoteflow-proposal.pdf`, `Cache-Control: no-store` и `X-Content-Type-Options: nosniff`.
+
+## Data exchange boundary
+
+JSON export содержит только versioned envelope `exportVersion: "1"`, `type: "quoteflow-calculation"` и строгий `QuoteCalculationInput`. Draft metadata, timestamps, request IDs и totals не экспортируются. Import ограничен 256 KiB, обрабатывается как недоверенный input, отвергает неизвестные поля и несовместимые версии и заменяет текущий draft только после полной strict validation.
+
+CSV создаётся локально с UTF-8 BOM, CRLF, фиксированным порядком колонок и exact decimal strings. Пользовательские текстовые cells защищаются от spreadsheet formula injection. Downloads используют временный object URL с гарантированным удалением anchor и deferred revoke.
+
+Backend preview выполняется только по явному действию пользователя. API client отправляет только `QuoteCalculationInput`, проверяет response runtime structure, ограничивает request ID и денежные значения, поддерживает 10-second timeout, replacement/abort и игнорирует obsolete responses. Backend result показывается отдельно и сравнивается со всеми полями локального результата.
 
 ## Browser storage boundary
 
@@ -137,7 +155,7 @@ Storage layer:
 
 TypeScript и Python реализации используют одну формулу, одинаковые лимиты и общие JSON fixtures. Денежные вычисления и UI-formatting не опираются на floating point. Backend всегда пересчитывает totals самостоятельно.
 
-## Поток данных Stage 3–4
+## Поток данных Stage 3–5
 
 1. Пользователь редактирует `EditableDraft`.
 2. UI сохраняет промежуточные строковые значения.
@@ -149,7 +167,10 @@ TypeScript и Python реализации используют одну форм
 8. Открытие нового, demo или сохранённого draft сбрасывает touched-state.
 9. Для валидного расчёта с непустым названием UI отображает print representation и разрешает browser print.
 10. Независимый PDF endpoint валидирует тот же input, повторно считает totals и возвращает in-memory PDF.
+11. Валидный strict input может быть экспортирован в JSON/CSV или показан как payload preview.
+12. JSON import полностью проверяется до преобразования в новый `EditableDraft`.
+13. Явный API preview request отправляет strict input, а runtime-validated result сравнивается с локальным расчётом.
 
 ## Следующие архитектурные границы
 
-Этап 5 добавит JSON/CSV import/export, backend preview integration и payload preview. Текущие PDF security boundaries и exact calculation semantics должны сохраняться.
+Этап 6 добавит Docker Compose, сквозной local launch, dependency audit и итоговый responsive/accessibility/security QA. Текущие local-first, exact calculation, import/export, API и PDF boundaries должны сохраняться.
