@@ -108,18 +108,35 @@
 
 ## Этап 6 — integration и QA
 
-Статус: **следующий**.
+Статус: **завершён**.
 
-- Docker Compose;
-- полный test/build;
-- dependency audit;
-- responsive/accessibility QA;
-- screenshots;
-- security/publication review.
+Реализованы и проверены:
+
+- Docker Compose с отдельными frontend/backend services;
+- loopback-only frontend на `127.0.0.1:8080` и backend без host publish;
+- multi-stage wheel-based backend image и Nginx frontend image;
+- непривилегированные runtime users и healthchecks;
+- production-like Nginx routing `/api/`, SPA fallback, cache policy и baseline security headers;
+- полный container build/up/smoke/down cycle без mounts, volumes или privileged mode;
+- сквозные health, calculation preview, validation, oversized body и PDF checks через reverse proxy;
+- проверка runtime contents, users, image history и отсутствия test/build tooling;
+- 135 frontend tests, production build и TypeScript check;
+- 78 backend tests, import smoke и installed-wheel verification;
+- npm и pip dependency audits без известных уязвимостей на момент проверки;
+- responsive browser QA на шести viewports, screenshots во временном каталоге и automated axe scan с 0 violations;
+- JSON/CSV import/export, API preview, browser print и PDF smoke в едином локальном окружении;
+- корректная остановка с удалением Stage 6 containers/network без project volumes.
+
+Проверенный implementation commit: `63833f88f97da1406a2b8ae0341e90da806aa5e2`.
+
+Stage 6 не выполнял publication или deployment и не менял calculation, exchange, storage или PDF contracts.
 
 ## Этап 7 — публикация и deployment
 
-- решение о публичности;
-- лицензия после согласования;
-- public GitHub только после audit;
-- live deployment только после отдельного review.
+Статус: **следующий только после отдельного решения владельца**.
+
+- принять решение о сохранении приватности или публичной публикации;
+- согласовать лицензию до её добавления;
+- повторить publication/security audit непосредственно перед изменением видимости;
+- определить production platform, TLS, secrets, CORS, rate limiting, logging и monitoring до deployment;
+- public GitHub и live deployment выполнять только после явного отдельного согласования.
