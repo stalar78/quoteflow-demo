@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
@@ -10,6 +10,7 @@ import {
   parsePercentToBasisPoints
 } from "./features/calculation/inputAdapters";
 import { DRAFT_STORAGE_KEY } from "./features/drafts/draftStorage";
+import { serializeCalculationEnvelope } from "./features/exchange/dataExchange";
 
 function renderApp() {
   return {
@@ -45,8 +46,45 @@ function storedDraft(projectName = "Сохранённый расчёт"): Edita
   };
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+  return { promise, resolve, reject };
+}
+
+function matchingApiResponse(body: { items: Array<{ id: string }> }, requestId = "ui-test") {
+  return new Response(
+    JSON.stringify({
+      requestId,
+      calculation: {
+        items: [
+          {
+            itemId: body.items[0].id,
+            lineGrossMinor: 300000,
+            lineDiscountMinor: 0,
+            lineTotalMinor: 300000
+          }
+        ],
+        subtotalMinor: 300000,
+        overallDiscountMinor: 0,
+        amountAfterDiscountMinor: 300000,
+        taxMinor: 0,
+        totalMinor: 300000,
+        currency: "RUB",
+        calculationVersion: "1"
+      }
+    }),
+    { headers: { "content-type": "application/json" } }
+  );
+}
+
 describe("QuoteFlow UI", () => {
   beforeEach(() => {
+    vi.useRealTimers();
     localStorage.removeItem(DRAFT_STORAGE_KEY);
     vi.restoreAllMocks();
   });
@@ -400,5 +438,281 @@ describe("QuoteFlow UI", () => {
 
     expect(screen.getByDisplayValue(`${longText} ✅`)).toBeInTheDocument();
     expect(within(screen.getByText("Позиция 1").closest("article")!).getByDisplayValue(longText)).toBeInTheDocument();
+  });
+
+  it("shows payload preview only for a valid strict input", async () => {
+    const { user } = renderApp();
+
+    expect(screen.getByText("Заполните расчёт, чтобы увидеть строгий payload.")).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Название проекта"), "API preview");
+    await fillValidSingleItem(user);
+
+    const preview = screen.getByText(/"schemaVersion": "1"/);
+    expect(preview).toHaveTextContent('"projectName": "API preview"');
+    expect(preview).not.toHaveTextContent("totalMinor");
+    expect(preview).not.toHaveTextContent("createdAt");
+  });
+
+  it("renders data exchange outside the sticky sidebar", () => {
+    renderApp();
+
+    const exchange = screen.getByRole("heading", { name: "Обмен данными" }).closest("section")!;
+    const sidebar = screen.getByRole("heading", { name: "Черновики" }).closest("aside")!;
+
+    expect(sidebar).not.toContainElement(exchange);
+  });
+
+  it("does not call the preview API automatically", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}"));
+    const { user } = renderApp();
+
+    await user.type(screen.getByLabelText("Название проекта"), "API preview");
+    await fillValidSingleItem(user);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("sends preview API request only after explicit click", async () => {
+    vi.spyOn(crypto, "getRandomValues").mockImplementation((array) => {
+      (array as Uint8Array).fill(1);
+      return array;
+    });
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+      const body = JSON.parse((init as RequestInit).body as string);
+      return new Response(
+        JSON.stringify({
+          requestId: "ui-test",
+          calculation: {
+            items: [
+              {
+                itemId: body.items[0].id,
+                lineGrossMinor: 300000,
+                lineDiscountMinor: 0,
+                lineTotalMinor: 300000
+              }
+            ],
+            subtotalMinor: 300000,
+            overallDiscountMinor: 0,
+            amountAfterDiscountMinor: 300000,
+            taxMinor: 0,
+            totalMinor: 300000,
+            currency: "RUB",
+            calculationVersion: "1"
+          }
+        }),
+        { headers: { "content-type": "application/json" } }
+      );
+    });
+    const { user } = renderApp();
+
+    await user.type(screen.getByLabelText("Название проекта"), "API preview");
+    await fillValidSingleItem(user);
+    await user.click(screen.getByRole("button", { name: "Проверить через API" }));
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [, init] = fetchMock.mock.calls[0];
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/calculations/preview");
+    expect((init as RequestInit).method).toBe("POST");
+    expect((init as RequestInit).headers).toEqual({
+      "Content-Type": "application/json",
+      "X-Request-ID": "ui-01010101010101010101010101010101"
+    });
+    expect(JSON.parse((init as RequestInit).body as string)).not.toHaveProperty("totalMinor");
+    expect(await screen.findByText("Backend result совпадает с локальным расчётом.")).toBeInTheDocument();
+  });
+
+  it("shows loading state and allows replacing an in-flight API request", async () => {
+    const first = deferred<Response>();
+    const second = deferred<Response>();
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementationOnce(async () => first.promise)
+      .mockImplementationOnce(async (_url, init) => {
+        const body = JSON.parse((init as RequestInit).body as string);
+        return second.promise.then(() => matchingApiResponse(body, "ui-second"));
+      });
+    const { user } = renderApp();
+
+    await user.type(screen.getByLabelText("Название проекта"), "API preview");
+    await fillValidSingleItem(user);
+    await user.click(screen.getByRole("button", { name: "Проверить через API" }));
+
+    expect(screen.getByText("Отправляем расчёт в API...")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Повторить запрос" })).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: "Повторить запрос" }));
+    second.resolve(new Response());
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(await screen.findByText("Backend result совпадает с локальным расчётом.")).toBeInTheDocument();
+    expect(screen.getByText(/ui-second/)).toBeInTheDocument();
+  });
+
+  it("shows a specific timeout message and clears timeout handles", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      (_url, init) =>
+        new Promise((_resolve, reject) => {
+          (init as RequestInit).signal?.addEventListener("abort", () =>
+            reject(new DOMException("aborted", "AbortError"))
+          );
+        })
+    );
+    renderApp();
+
+    fireEvent.change(screen.getByLabelText("Название проекта"), {
+      target: { value: "API preview" }
+    });
+    fireEvent.change(screen.getByLabelText("Название", { selector: "input" }), {
+      target: { value: "Прототип" }
+    });
+    fireEvent.change(screen.getByLabelText("Количество"), {
+      target: { value: "2" }
+    });
+    fireEvent.change(screen.getByLabelText("Цена, ₽"), {
+      target: { value: "1500" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Проверить через API" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+
+    expect(screen.getByText("API не ответил за 10 секунд. Повторите запрос.")).toBeInTheDocument();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
+  });
+
+  it("aborts API preview on calculation edit without announcing stale aborts", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      (_url, init) =>
+        new Promise((_resolve, reject) => {
+          (init as RequestInit).signal?.addEventListener("abort", () =>
+            reject(new DOMException("aborted", "AbortError"))
+          );
+        })
+    );
+    const { user } = renderApp();
+
+    await user.type(screen.getByLabelText("Название проекта"), "API preview");
+    await fillValidSingleItem(user);
+    await user.click(screen.getByRole("button", { name: "Проверить через API" }));
+    await user.type(screen.getByLabelText("Название проекта"), " updated");
+
+    expect(await screen.findByText("API preview сброшен после изменения расчёта.")).toBeInTheDocument();
+    expect(screen.queryByText("Запрос отменён.")).not.toBeInTheDocument();
+  });
+
+  it("ignores a late obsolete API response that resolves after a newer request", async () => {
+    const first = deferred<Response>();
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementationOnce(async (_url, init) => {
+        const body = JSON.parse((init as RequestInit).body as string);
+        return first.promise.then(() => matchingApiResponse(body, "ui-first-late"));
+      })
+      .mockImplementationOnce(async (_url, init) => {
+        const body = JSON.parse((init as RequestInit).body as string);
+        return matchingApiResponse(body, "ui-second-current");
+      });
+    const { user } = renderApp();
+
+    await user.type(screen.getByLabelText("Название проекта"), "API preview");
+    await fillValidSingleItem(user);
+    await user.click(screen.getByRole("button", { name: "Проверить через API" }));
+    await user.click(screen.getByRole("button", { name: "Повторить запрос" }));
+    expect(await screen.findByText(/ui-second-current/)).toBeInTheDocument();
+
+    first.resolve(new Response());
+    await Promise.resolve();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText(/ui-first-late/)).not.toBeInTheDocument();
+    expect(screen.getByText(/ui-second-current/)).toBeInTheDocument();
+  });
+
+  it("shows a discrepancy when backend preview differs from the local result", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+      const body = JSON.parse((init as RequestInit).body as string);
+      return new Response(
+        JSON.stringify({
+          requestId: "ui-mismatch",
+          calculation: {
+            items: [
+              {
+                itemId: body.items[0].id,
+                lineGrossMinor: 300000,
+                lineDiscountMinor: 0,
+                lineTotalMinor: 300001
+              }
+            ],
+            subtotalMinor: 300001,
+            overallDiscountMinor: 0,
+            amountAfterDiscountMinor: 300001,
+            taxMinor: 0,
+            totalMinor: 300001,
+            currency: "RUB",
+            calculationVersion: "1"
+          }
+        }),
+        { headers: { "content-type": "application/json" } }
+      );
+    });
+    const { user } = renderApp();
+
+    await user.type(screen.getByLabelText("Название проекта"), "API preview");
+    await fillValidSingleItem(user);
+    await user.click(screen.getByRole("button", { name: "Проверить через API" }));
+
+    expect(await screen.findByText("Backend result отличается от локального расчёта.")).toBeInTheDocument();
+    expect(screen.getByText(/ui-mismatch/)).toBeInTheDocument();
+  });
+
+  it("keeps the current draft after failed JSON import", async () => {
+    const { user } = renderApp();
+
+    await user.type(screen.getByLabelText("Название проекта"), "Текущий");
+    const input = screen.getByLabelText("Импорт JSON", { selector: "input" });
+    await user.upload(input, new File(["{"], "bad.json", { type: "application/json" }));
+
+    expect(screen.getByDisplayValue("Текущий")).toBeInTheDocument();
+    expect(screen.getByText("Файл не является корректным JSON.")).toBeInTheDocument();
+  });
+
+  it("imports valid JSON and resets touched validation state", async () => {
+    const { user } = renderApp();
+    const envelope = serializeCalculationEnvelope({
+      schemaVersion: "1",
+      projectName: "Импортированный",
+      client: { displayName: "", contactNote: "" },
+      items: [
+        {
+          id: "import-item",
+          name: "Импорт",
+          description: "",
+          quantity: "1.5",
+          unit: "час",
+          unitPriceMinor: 1200050,
+          discountBasisPoints: 1234
+        }
+      ],
+      overallDiscountBasisPoints: 500,
+      taxBasisPoints: 0,
+      comment: "",
+      currency: "RUB"
+    });
+
+    await user.click(screen.getByLabelText("Название", { selector: "input" }));
+    await user.tab();
+    expect(screen.getByText("Укажите название позиции")).toBeInTheDocument();
+
+    const input = screen.getByLabelText("Импорт JSON", { selector: "input" });
+    await user.upload(input, new File([envelope], "quote.json", { type: "application/json" }));
+
+    expect(screen.getByDisplayValue("Импортированный")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("12000.50")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("12.34")).toBeInTheDocument();
+    expect(screen.queryByText("Укажите название позиции")).not.toBeInTheDocument();
+    expect(screen.getByText("JSON импортирован. Черновик заменён после строгой проверки.")).toBeInTheDocument();
   });
 });

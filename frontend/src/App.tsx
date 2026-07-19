@@ -18,6 +18,7 @@ import {
   loadDrafts,
   saveDraft
 } from "./features/drafts/draftStorage";
+import { DataExchangePanel } from "./features/exchange/DataExchangePanel";
 
 type Feedback = {
   tone: "success" | "error" | "neutral";
@@ -148,6 +149,15 @@ export function App() {
     window.print();
   }, []);
 
+  const importDraft = useCallback(
+    (nextDraft: EditableDraft, message: string) => {
+      setDraft(nextDraft);
+      resetTouched();
+      setFeedback({ tone: "success", text: message });
+    },
+    [resetTouched]
+  );
+
   return (
     <div className="min-h-screen bg-[#f7f5f0] text-slate-900">
       <AppHeader onNew={startNew} />
@@ -177,6 +187,11 @@ export function App() {
             />
           </aside>
         </div>
+        <DataExchangePanel
+          key={draft.id}
+          calculation={calculation}
+          onImportDraft={importDraft}
+        />
         <PrintDocument calculation={calculation} draft={draft} />
       </main>
     </div>
