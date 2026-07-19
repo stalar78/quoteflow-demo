@@ -84,15 +84,31 @@
 
 ## Этап 5 — export и API integration
 
-Статус: **следующий**.
+Статус: **завершён**.
 
-- JSON import/export;
-- CSV export;
-- backend preview integration;
-- payload preview;
-- документация фактической реализации.
+Реализованы:
+
+- versioned JSON export envelope только со строгим `QuoteCalculationInput`;
+- strict JSON import до 256 KiB без silent migration;
+- преобразование imported input в новый `EditableDraft` с exact integer conversions;
+- CSV export с UTF-8 BOM, CRLF, fixed columns и exact decimal strings;
+- spreadsheet formula-injection protection;
+- read-only payload preview без автоматической отправки;
+- явная интеграция UI с `POST /api/v1/calculations/preview`;
+- Vite development proxy `/api` на локальный FastAPI;
+- safe client request ID и runtime response validation;
+- loading, success, mismatch, safe error и retry states;
+- 10-second timeout, abort-on-edit, request replacement и stale-response protection;
+- full-width responsive data-exchange section вне sticky sidebar;
+- 135 frontend tests, production build и TypeScript check.
+
+Проверенный implementation commit: `cdbc22f395c7971fafa85eb3ff20a19152254192`.
+
+Не реализованы на этом этапе: PDF endpoint integration из UI, Docker, deployment и внешняя отправка.
 
 ## Этап 6 — integration и QA
+
+Статус: **следующий**.
 
 - Docker Compose;
 - полный test/build;
