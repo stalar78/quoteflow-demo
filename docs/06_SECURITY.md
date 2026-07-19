@@ -2,7 +2,7 @@
 
 QuoteFlow нельзя описывать как полностью безопасный. Документ фиксирует реализованные границы и требования, которые остаются обязательными перед публичным размещением.
 
-## Реализовано на Этапах 2–4
+## Реализовано на Этапах 2–5
 
 - секреты и `.env` исключены через `.gitignore`;
 - `.env.example` содержит только безопасные локальные значения;
@@ -30,7 +30,15 @@ QuoteFlow нельзя описывать как полностью безопа
 - пользовательский текст экранируется перед markup-aware ReportLab objects;
 - response использует фиксированное имя файла, `no-store`, `nosniff` и безопасный request ID;
 - DejaVu font assets включены вместе с license-файлом и проверены в установленном wheel;
-- frontend print representation рендерит текст через React и вызывает только `window.print()`.
+- frontend print representation рендерит текст через React и вызывает только `window.print()`;
+- JSON import ограничен фактическим размером 256 KiB и требует versioned export envelope;
+- import отвергает unknown fields, invalid runtime types, duplicate IDs и несовместимые версии до замены текущего draft;
+- CSV использует exact decimal strings и neutralizes spreadsheet formula prefixes в пользовательских cells;
+- временные download anchors удаляются, а object URLs отзываются deferred cleanup;
+- payload preview рендерится как read-only text и сам по себе не отправляет данные;
+- backend preview выполняется только по явному действию пользователя;
+- API response проверяется как недоверенный runtime input с exact keys, safe IDs, item limits и money bounds;
+- timeout, request replacement, abort-on-edit и stale-response protection не позволяют устаревшему ответу изменить актуальный UI state.
 
 ## Threat model MVP
 
@@ -65,9 +73,11 @@ QuoteFlow нельзя описывать как полностью безопа
 
 Сохранение draft не означает, что данные прошли strict calculation или document validation.
 
-## JSON import
+## JSON import и CSV export
 
-Import ещё не реализован. JSON должен обрабатываться как недоверенный input, иметь ограничение размера, проверяться по `schemaVersion` и строгой схеме. Неизвестные поля и несовместимые версии не должны молча мигрировать.
+JSON import реализован как обработка недоверенного файла до 256 KiB. Принимается только envelope версии `1` и типа `quoteflow-calculation`; raw calculation input, неизвестные поля и несовместимые версии отвергаются. Текущий draft заменяется только после полной проверки существующим calculation core. При ошибке исходное состояние сохраняется.
+
+CSV создаётся только из валидного локального расчёта. Все cells quoted, строки используют CRLF, значения денег и процентов формируются целочисленно. Для user-controlled text применяется защита от spreadsheet formula injection. CSV не импортируется обратно.
 
 ## PDF boundaries
 
