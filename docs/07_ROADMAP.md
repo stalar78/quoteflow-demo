@@ -59,23 +59,32 @@
 
 ## Этап 4 — PDF
 
-Статус: **следующий**.
+Статус: **завершён**.
 
-План:
+Реализованы:
 
-- technical spike и документированный выбор библиотеки;
-- print-friendly representation;
-- безопасная PDF generation;
-- русский текст и шрифты;
-- перенос длинного текста;
-- многостраничные документы;
-- корректные деньги, скидки и налог;
-- synthetic demo content;
-- тесты PDF boundary и smoke verification.
+- backend PDF generation через ReportLab Platypus;
+- `POST /api/v1/documents/pdf` со строгим `QuoteCalculationInput`;
+- обязательное непустое название проекта для document generation;
+- повторный exact-integer расчёт totals на backend;
+- полностью in-memory generation без временных файлов;
+- безопасная обработка пользовательского текста без произвольного HTML/templates/URL/path;
+- русский текст через встроенные DejaVu Sans и DejaVu Sans Bold;
+- license-файл шрифтов и явная wheel package-data configuration;
+- перенос длинного текста, многостраничные таблицы и повторение заголовка;
+- фиксированный безопасный filename, `no-store`, `nosniff` и request ID;
+- независимое frontend print-friendly representation через `window.print()`;
+- print action только для валидного расчёта с непустым названием;
+- 70 frontend tests и 78 backend tests;
+- production frontend build, type-check, wheel contents и installed-wheel PDF smoke verification.
 
-Не входят без отдельного согласования: JSON/CSV export, отправка документов, Docker и deployment.
+Проверенный implementation commit: `3d6e8b61984d0caada7e7382207d5b862c9158aa`.
+
+Не реализованы на этом этапе: JSON/CSV export, UI-to-backend integration, отправка документов, Docker и deployment.
 
 ## Этап 5 — export и API integration
+
+Статус: **следующий**.
 
 - JSON import/export;
 - CSV export;
