@@ -2,11 +2,11 @@
 
 ## Текущий статус
 
-Этап 5 завершён и проверен. Implementation commit:
+Этап 6 завершён и проверен. Implementation commit:
 
-`cdbc22f395c7971fafa85eb3ff20a19152254192`
+`63833f88f97da1406a2b8ae0341e90da806aa5e2`
 
-Реализованы versioned JSON import/export, safe CSV export, read-only payload preview и явная frontend-интеграция с calculation preview API. Docker и deployment ещё отсутствуют; PDF endpoint из UI не вызывается.
+Добавлен и сквозным образом проверен локальный Docker Compose-контур с Nginx frontend и внутренним FastAPI backend. Это production-like local integration environment, а не deployment. Репозиторий остаётся приватным; лицензия и публикация не согласованы. PDF endpoint из UI по-прежнему не вызывается.
 
 ## Проверенное состояние
 
@@ -39,32 +39,39 @@
 - API response проходит exact runtime validation и сравнивается с локальным result;
 - timeout, abort-on-edit, request replacement и stale-response protection покрыты тестами;
 - DataExchangePanel расположен full-width вне sticky sidebar;
+- Compose публикует только frontend на `127.0.0.1:8080`, backend остаётся внутри private network;
+- frontend/backend runtime users непривилегированные, mounts/volumes/privileged mode отсутствуют;
+- Nginx `/api/` proxy, SPA fallback, missing-asset 404, cache policy и baseline security headers проверены;
+- оба services прошли healthchecks без restart, а полный build/up/smoke/down cycle завершён;
+- calculation preview, safe/unsafe request IDs, malformed JSON, strict unknown-field rejection и backend 413 проверены через reverse proxy;
+- server PDF через proxy сохранил MIME/headers, кириллицу, totals и in-memory boundary;
+- frontend runtime не содержит Node/npm, backend runtime не содержит test dependencies или `/wheels`;
+- browser QA пройден на шести viewports без horizontal scroll; axe scan сообщил 0 violations;
+- npm и pip audits не выявили известных уязвимостей на момент Stage 6;
 - staging и patch прошли whitespace review;
 - реальных данных и секретов не добавлено;
 - working tree владельца после push был чистым.
 
 ## Следующий этап
 
-Этап 6: integration и QA.
+Этап 7: отдельное решение о публикации и deployment.
 
-Минимальные задачи Этапа 6:
+До начала Stage 7 необходимо получить явное решение владельца по каждому внешнему изменению. Возможные задачи после такого решения:
 
-- добавить Docker Compose для локального frontend/backend launch;
-- определить production-like local routing для `/api` без deployment;
-- выполнить полный frontend/backend test and build matrix;
-- выполнить dependency audit без automatic force fixes;
-- провести responsive и accessibility QA с screenshots;
-- проверить JSON/CSV, API preview, print и PDF в одном local environment;
-- проверить security/publication boundaries, секреты и synthetic data;
-- не изменять calculation semantics и versioned exchange contracts.
+- выбрать, остаётся ли репозиторий приватным;
+- согласовать лицензию до добавления license-файла проекта;
+- повторить security, dependency, base-image, Git-history и synthetic-data audit непосредственно перед публикацией;
+- выбрать production platform и определить TLS, secrets, CORS, rate limiting, logs/monitoring и rollback;
+- сформировать deployment brief с точными границами и критериями приёмки.
 
-Не входят в Этап 6 без отдельного согласования:
+Без отдельного согласования не выполнять:
 
-- произвольная внешняя отправка;
-- email, Telegram или webhooks;
-- Docker Compose;
-- deployment;
-- публикация репозитория.
+- изменение visibility репозитория;
+- добавление лицензии проекта;
+- live deployment или создание внешней инфраструктуры;
+- email, Telegram, webhook или иные delivery integrations;
+- публикацию screenshots, документов или пользовательских данных;
+- изменение calculation, storage, exchange, API или PDF contracts.
 
 ## Обязательное чтение для Codex
 
