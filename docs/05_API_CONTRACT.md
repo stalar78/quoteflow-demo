@@ -1,6 +1,6 @@
 # 05. API Contract
 
-Два endpoint этого документа реализованы на Этапе 2. PDF endpoint остаётся будущим.
+Три endpoint этого документа реализованы на Этапах 2 и 4.
 
 ## Общие правила
 
@@ -63,7 +63,20 @@ Response `200`:
 
 ## POST /api/v1/documents/pdf
 
-Не реализован и не зарегистрирован как рабочий endpoint. Он будет проектироваться после отдельного PDF technical spike.
+Реализован на Этапе 4. Request body соответствует существующему строгому `QuoteCalculationInput`.
+
+Дополнительное правило документа: `projectName.strip()` должен быть непустым. Backend не принимает totals, HTML, template, URL, filename или filesystem path и всегда повторно выполняет расчёт через Python calculation core.
+
+Response `200`:
+
+- body: бинарный PDF, начинающийся с `%PDF-`;
+- `Content-Type: application/pdf`;
+- `Content-Disposition: attachment; filename="quoteflow-proposal.pdf"`;
+- `Cache-Control: no-store`;
+- `X-Content-Type-Options: nosniff`;
+- `X-Request-ID`: безопасный принятый или сгенерированный request ID.
+
+PDF формируется in-memory, поддерживает кириллицу, длинный текст, до 100 позиций и многостраничные таблицы. Endpoint не сохраняет документ на сервере.
 
 ## Error envelope
 
@@ -94,4 +107,4 @@ Response `200`:
 
 ## Frontend-only operations
 
-Черновики, JSON import/export и CSV export не имеют backend endpoints.
+Черновики, JSON import/export, CSV export и browser print не имеют backend endpoints. Действие `Печать / сохранить PDF` во frontend вызывает только `window.print()` и не обращается к `/api/v1/documents/pdf`.
