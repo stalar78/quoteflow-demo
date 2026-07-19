@@ -35,6 +35,9 @@ frontend/
     App.tsx
     main.tsx
     styles.css
+  .dockerignore
+  Dockerfile
+  nginx.conf
   package.json
   vite.config.ts
   tsconfig*.json
@@ -62,6 +65,8 @@ backend/
     test_api.py
     test_calculation.py
     test_pdf_api.py
+  .dockerignore
+  Dockerfile
   pyproject.toml
 
 fixtures/
@@ -69,6 +74,7 @@ fixtures/
     golden.json
     invalid.json
 
+compose.yaml
 docs/
 ```
 
@@ -151,11 +157,24 @@ Storage layer:
 
 Черновики существуют только в текущем браузере, не синхронизируются с backend и не являются надёжным или конфиденциальным хранилищем.
 
+## Local integration boundary
+
+Stage 6 добавляет локальный production-like контур из двух Compose services:
+
+- frontend собирается в Node builder stage и обслуживается unprivileged Nginx на `127.0.0.1:8080`;
+- backend собирается как wheel и запускается непривилегированным пользователем во внутренней Compose network без host publish;
+- Nginx проксирует `/api/` в `backend:8000`, обслуживает SPA fallback, не подменяет отсутствующие assets и применяет отдельные cache policies для hashed assets и HTML;
+- оба service имеют healthcheck; frontend стартует после healthy backend;
+- runtime images не содержат bind mounts, project volumes, Docker socket, test dependencies или build wheel directory;
+- Compose не использует privileged mode, host networking или `container_name`.
+
+Контур предназначен только для локального integration/QA. Он не является production deployment и не задаёт production CORS, TLS, rate limiting, observability или persistence.
+
 ## Calculation consistency
 
 TypeScript и Python реализации используют одну формулу, одинаковые лимиты и общие JSON fixtures. Денежные вычисления и UI-formatting не опираются на floating point. Backend всегда пересчитывает totals самостоятельно.
 
-## Поток данных Stage 3–5
+## Поток данных Stage 3–6
 
 1. Пользователь редактирует `EditableDraft`.
 2. UI сохраняет промежуточные строковые значения.
@@ -170,7 +189,9 @@ TypeScript и Python реализации используют одну форм
 11. Валидный strict input может быть экспортирован в JSON/CSV или показан как payload preview.
 12. JSON import полностью проверяется до преобразования в новый `EditableDraft`.
 13. Явный API preview request отправляет strict input, а runtime-validated result сравнивается с локальным расчётом.
+14. В Docker-контуре браузер обращается только к loopback Nginx, а `/api/` маршрутизируется во внутренний backend service.
+15. Healthchecks подтверждают готовность обоих services; остановка Compose удаляет локальные containers/network без пользовательских volumes.
 
 ## Следующие архитектурные границы
 
-Этап 6 добавит Docker Compose, сквозной local launch, dependency audit и итоговый responsive/accessibility/security QA. Текущие local-first, exact calculation, import/export, API и PDF boundaries должны сохраняться.
+Этап 7 требует отдельного решения о публичности и deployment. До такого решения текущие local-first, exact calculation, import/export, API, PDF и container boundaries должны сохраняться; публикация, лицензирование и live deployment не выполняются автоматически.
