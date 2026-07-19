@@ -123,6 +123,32 @@ type CalculationResult = {
 - порядок items сохраняется;
 - несовместимые версии storage/import не мигрируют молча.
 
+## Calculation export envelope
+
+JSON import/export использует отдельный versioned envelope:
+
+```ts
+type CalculationExportEnvelope = {
+  exportVersion: "1";
+  type: "quoteflow-calculation";
+  calculation: QuoteCalculationInput;
+};
+```
+
+Envelope содержит только три указанных поля. Он не включает `EditableDraft`, storage metadata, timestamps, request ID или calculated totals. Import не принимает raw `QuoteCalculationInput` без envelope и не выполняет молчаливую миграцию других версий.
+
+После успешного import создаётся новый `EditableDraft` с новым ID и timestamps; порядок и IDs позиций сохраняются, а minor units и basis points преобразуются обратно в exact decimal strings через integer arithmetic.
+
+## CSV export model
+
+CSV содержит позиции валидного расчёта в фиксированном порядке колонок:
+
+```text
+item_id,name,description,quantity,unit,unit_price_rub,discount_percent,line_gross_rub,line_discount_rub,line_total_rub,currency
+```
+
+Money и percent values представлены точными decimal strings без locale separators. CSV не является входной моделью и обратно не импортируется.
+
 ## Draft storage envelope
 
 Ключ:
