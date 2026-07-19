@@ -13,6 +13,7 @@ frontend/
       calculation/
         CalculationForm.tsx
         ItemsEditor.tsx
+        PrintDocument.tsx
         SummaryPanel.tsx
         calculate.ts
         calculate.test.ts
@@ -24,6 +25,7 @@ frontend/
         DraftsPanel.tsx
         draftStorage.ts
     App.test.tsx
+    PrintDocument.test.tsx
     App.tsx
     main.tsx
     styles.css
@@ -35,17 +37,25 @@ backend/
   app/
     api/routes/
       calculations.py
+      documents.py
       health.py
+    assets/fonts/
+      DejaVuSans.ttf
+      DejaVuSans-Bold.ttf
+      LICENSE
     core/
       calculation.py
       errors.py
     schemas/
       calculation.py
+    services/
+      pdf_document.py
     config.py
     main.py
   tests/
     test_api.py
     test_calculation.py
+    test_pdf_api.py
   pyproject.toml
 
 fixtures/
@@ -71,7 +81,9 @@ UI-слой отвечает за:
 - line totals и итоговую панель;
 - локальное управление черновиками;
 - demo/privacy предупреждения;
-- keyboard/focus и базовый accessibility слой.
+- keyboard/focus и базовый accessibility слой;
+- print-friendly representation только для валидного расчёта с непустым названием проекта;
+- вызов `window.print()` без сетевого обращения к backend.
 
 Editable draft отделён от strict calculation input. Денежные и процентные строки преобразуются через разбор строки и `BigInt`; quantity нормализуется в каноническую decimal string. Frontend не считается доверенной стороной.
 
@@ -85,13 +97,20 @@ Backend реализован как stateless FastAPI service.
 - повторный расчёт через Python `int`;
 - `GET /api/health`;
 - `POST /api/v1/calculations/preview`;
+- `POST /api/v1/documents/pdf`;
 - единый error envelope;
 - request ID;
 - CORS allowlist;
 - фактический request-body limit;
 - safe internal-error response.
 
-Backend не хранит расчёты, черновики или документы. Stage 3 UI пока не вызывает backend endpoint.
+Backend не хранит расчёты, черновики или документы. Stage 4 UI не вызывает backend endpoints: browser print и server PDF являются двумя отдельными, согласованными представлениями одного строгого расчёта.
+
+## PDF generation boundary
+
+PDF создаётся на backend через ReportLab Platypus полностью в памяти (`BytesIO`). Endpoint принимает только существующий строгий `QuoteCalculationInput`, требует непустой `projectName`, повторно вычисляет totals через `calculate_quote` и не принимает HTML, template, URL, filename или filesystem path.
+
+Пользовательский текст экранируется перед передачей в markup-aware ReportLab objects. В PDF встраиваются DejaVu Sans и DejaVu Sans Bold с сохранённым license-файлом; package-data проверена сборкой и установкой wheel вне source checkout. Ответ имеет фиксированное имя `quoteflow-proposal.pdf`, `Cache-Control: no-store` и `X-Content-Type-Options: nosniff`.
 
 ## Browser storage boundary
 
@@ -118,7 +137,7 @@ Storage layer:
 
 TypeScript и Python реализации используют одну формулу, одинаковые лимиты и общие JSON fixtures. Денежные вычисления и UI-formatting не опираются на floating point. Backend всегда пересчитывает totals самостоятельно.
 
-## Поток данных Stage 3
+## Поток данных Stage 3–4
 
 1. Пользователь редактирует `EditableDraft`.
 2. UI сохраняет промежуточные строковые значения.
@@ -128,7 +147,9 @@ TypeScript и Python реализации используют одну форм
 6. UI показывает line totals и summary.
 7. Draft может быть сохранён в versioned `localStorage` envelope.
 8. Открытие нового, demo или сохранённого draft сбрасывает touched-state.
+9. Для валидного расчёта с непустым названием UI отображает print representation и разрешает browser print.
+10. Независимый PDF endpoint валидирует тот же input, повторно считает totals и возвращает in-memory PDF.
 
 ## Следующие архитектурные границы
 
-Этап 4 добавит print-friendly representation и PDF generation. PDF не должен принимать произвольный HTML, template или filesystem path. Backend integration, JSON/CSV import/export и payload preview остаются задачами последующих этапов.
+Этап 5 добавит JSON/CSV import/export, backend preview integration и payload preview. Текущие PDF security boundaries и exact calculation semantics должны сохраняться.
