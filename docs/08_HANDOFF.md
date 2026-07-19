@@ -2,16 +2,16 @@
 
 ## Текущий статус
 
-Этап 3 завершён и проверен. Implementation commit:
+Этап 4 завершён и проверен. Implementation commit:
 
-`8fec0b323bc31c9e5e10d8870f80e087fa6afed0`
+`3d6e8b61984d0caada7e7382207d5b862c9158aa`
 
-Реализованы responsive product UI, editable draft state, локальная validation, exact local calculation, summary и управление browser drafts. JSON/CSV export, UI-to-backend integration, PDF, Docker и deployment ещё отсутствуют.
+Реализованы server-side PDF generation, строгий PDF endpoint и независимое browser print representation. JSON/CSV export, UI-to-backend integration, Docker и deployment ещё отсутствуют.
 
 ## Проверенное состояние
 
-- frontend: 64 tests, production build и type-check проходят;
-- backend: 63 tests и application import/startup check проходят;
+- frontend: 70 tests, production build и type-check проходят;
+- backend: 78 tests и application import/startup check проходят;
 - TypeScript calculation core использует `bigint`, Python — `int`;
 - UI adapters преобразуют ruble/percent strings точной integer arithmetic;
 - денежное форматирование не делит minor units через floating point;
@@ -23,28 +23,34 @@
 - удаление и очистка не затрагивают другие localStorage keys;
 - request body limit проверяет фактические ASGI chunks;
 - request ID валидируется;
+- PDF endpoint повторно считает totals и не принимает arbitrary HTML/template/URL/filename/path;
+- PDF создаётся in-memory через ReportLab и возвращается с `no-store`, `nosniff` и фиксированным filename;
+- пользовательский текст экранируется перед markup-aware ReportLab objects;
+- DejaVu Sans assets и license включены в wheel через явную package-data configuration;
+- установленный wheel вне source checkout успешно генерирует PDF с извлекаемой кириллицей;
+- browser print доступен только для валидного расчёта с непустым названием и не вызывает backend;
+- длинный PDF и print-table поддерживают многостраничность и повторение заголовка;
 - staging и patch прошли whitespace review;
 - реальных данных и секретов не добавлено;
 - working tree владельца после push был чистым.
 
 ## Следующий этап
 
-Этап 4: PDF technical spike, print-friendly representation и безопасная PDF generation.
+Этап 5: JSON/CSV export и интеграция UI с существующими backend endpoints.
 
-Минимальные задачи Этапа 4:
+Минимальные задачи Этапа 5:
 
-- выбрать и обосновать PDF library;
-- определить, выполняется ли PDF generation на backend;
-- использовать пользовательский текст только как данные;
-- обеспечить русский текст и лицензируемый шрифт;
-- поддержать длинные строки и несколько страниц;
-- не принимать произвольный template, URL или filesystem path;
-- добавить synthetic PDF tests и smoke verification;
-- сохранить exact calculation semantics.
+- реализовать versioned JSON export/import со строгой проверкой недоверенного input;
+- реализовать безопасный CSV export;
+- подключить UI к calculation preview endpoint без изменения расчётной семантики;
+- добавить payload preview и понятные состояния network/error;
+- сохранить local-first draft workflow;
+- не дублировать и не ослаблять backend validation;
+- добавить synthetic integration tests;
+- сохранить PDF и print boundaries Этапа 4.
 
-Не входят в Этап 4 без отдельного согласования:
+Не входят в Этап 5 без отдельного согласования:
 
-- JSON/CSV import/export;
 - произвольная внешняя отправка;
 - email, Telegram или webhooks;
 - Docker Compose;
