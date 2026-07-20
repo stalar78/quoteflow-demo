@@ -54,7 +54,7 @@ docker info
 docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
 docker system df
 sudo nginx -v
-sudo nginx -T >/tmp/nginx-before-quoteflow.txt
+sudo nginx -T 2>&1 | grep -nE 'server_name|listen|proxy_pass'
 sudo certbot certificates
 sudo ss -ltnp
 sudo ufw status verbose
@@ -74,6 +74,16 @@ getent hosts quoteflow.stalarvision.ru
 - рабочий каталог QuoteFlow отделён от каталога `site-stalarvision`.
 
 Порог RAM намеренно не зафиксирован до просмотра фактической нагрузки сервера. Resource limits контейнеров добавляются только после этого review.
+
+## Безопасность владельца
+
+- Выполнять команды только в отдельном каталоге QuoteFlow; перед каждой изменяющей командой проверять `pwd`, `git status --short` и Compose project name.
+- Не копировать в чат private keys, certificate contents, tokens, полный `.env.production`, user data или неочищенные logs.
+- Не запускать команды `prune`, не удалять images/volumes и не менять существующие vhosts во время resource audit.
+- Не использовать `sudo` для Git/Docker без необходимости; `sudo` нужен только для просмотра/проверки system Nginx, firewall и certificates.
+- До разрешения deployment выполнять только read-only inventory и локальные/CI проверки.
+- Перед первым изменением Nginx сохранить его active config и проверить, что QuoteFlow получает отдельный vhost, не затрагивая `site-stalarvision`.
+- Конфигурация rate limiting предполагает прямой DNS на VPS. Если перед VPS появится CDN/proxy, сначала отдельно настроить и проверить trusted real-IP chain.
 
 ## Production environment
 
@@ -107,10 +117,10 @@ QUOTEFLOW_REQUEST_SIZE_LIMIT_BYTES=262144
 ## Контролируемый первый запуск — только после отдельного разрешения
 
 ```bash
-cd /home/stanislav/project/quoteflow
-git fetch --ff-only origin main
+cd <absolute-quoteflow-deployment-directory>
+git fetch origin main
 git checkout main
-git pull --ff-only origin main
+git merge --ff-only origin/main
 git status --short
 git rev-parse HEAD
 
