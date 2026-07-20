@@ -107,9 +107,40 @@ jobs:
       - name: Validate local Compose config
         run: docker compose config --quiet
       - name: Validate production Compose config
-        run: docker compose --env-file .env.production.example -f compose.production.yaml config --quiet
+        run: |
+          docker compose --env-file .env.production.example -f compose.production.yaml config --quiet
+          docker compose --env-file .env.production.example -f compose.production.yaml config
       - name: Build production Compose images
         run: docker compose --env-file .env.production.example -f compose.production.yaml build --pull
+      - name: Validate external Nginx configurations
+        run: |
+          set -euo pipefail
+          tls_root="$(mktemp -d)"
+          cleanup() {
+            rm -rf "$tls_root"
+          }
+          trap cleanup EXIT
+          mkdir -p "$tls_root/live/quoteflow.stalarvision.ru"
+          openssl req -x509 -nodes -newkey rsa:2048             -keyout "$tls_root/live/quoteflow.stalarvision.ru/privkey.pem"             -out "$tls_root/live/quoteflow.stalarvision.ru/fullchain.pem"             -days 1 -subj "/CN=quoteflow.stalarvision.ru" >/dev/null 2>&1
+          openssl dhparam -dsaparam -out "$tls_root/ssl-dhparams.pem" 2048 >/dev/null 2>&1
+          printf '%s\n' 'ssl_protocols TLSv1.2 TLSv1.3;' > "$tls_root/options-ssl-nginx.conf"
+          chmod -R a+rX "$tls_root"
+          docker run --rm             -v "$PWD/deploy/nginx/quoteflow.http.conf:/etc/nginx/conf.d/default.conf:ro"             quoteflow-frontend:replace-with-reviewed-git-sha nginx -t
+          docker run --rm             -v "$PWD/deploy/nginx/quoteflow.https.conf:/etc/nginx/conf.d/default.conf:ro"             -v "$tls_root:/etc/letsencrypt:ro"             quoteflow-frontend:replace-with-reviewed-git-sha nginx -t
+      - name: Review final image history
+        run: |
+          set -euo pipefail
+          secret_pattern='AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9_]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|AIza[0-9A-Za-z_-]{35}|sk-[A-Za-z0-9]{20,}'
+          for image in             quoteflow-backend:replace-with-reviewed-git-sha             quoteflow-frontend:replace-with-reviewed-git-sha
+          do
+            history_file="$(mktemp)"
+            docker history --no-trunc --format '{{.CreatedBy}}' "$image" | tee "$history_file"
+            if grep -E "$secret_pattern" "$history_file"; then
+              echo "Potential secret material found in image history for $image" >&2
+              exit 1
+            fi
+            rm -f "$history_file"
+          done
       - name: Scan backend runtime image
         # aquasecurity/trivy-action v0.35.0 (Trivy v0.69.3)
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
@@ -145,24 +176,100 @@ jobs:
           curl --fail --silent --show-error http://127.0.0.1:8081/ >/dev/null
           curl --fail --silent --show-error http://127.0.0.1:8081/api/health
           backend_id="$(docker compose --env-file .env.production.example -f compose.production.yaml ps -q backend)"
-          if [ "$(docker inspect --format '{{json .HostConfig.PortBindings}}' "$backend_id")" != "{}" ]; then
-            echo "Backend port must not be published on the host" >&2
-            docker inspect --format '{{json .HostConfig.PortBindings}}' "$backend_id" >&2
-            exit 1
-          fi
           frontend_id="$(docker compose --env-file .env.production.example -f compose.production.yaml ps -q frontend)"
-          python - "$frontend_id" <<'PY'
+          python - "$backend_id" "$frontend_id" <<'PY'
           import json
           import subprocess
           import sys
 
-          inspection = json.loads(
-              subprocess.check_output(["docker", "inspect", sys.argv[1]], text=True)
-          )[0]
-          bindings = inspection["NetworkSettings"]["Ports"].get("8080/tcp")
-          expected = [{"HostIp": "127.0.0.1", "HostPort": "8081"}]
-          if bindings != expected:
-              raise SystemExit(
-                  f"Expected frontend 8080/tcp binding {expected}, got {bindings}"
+          def inspect(container_id: str) -> dict:
+              return json.loads(
+                  subprocess.check_output(
+                      ["docker", "inspect", container_id], text=True
+                  )
+              )[0]
+
+          def require(condition: bool, message: str) -> None:
+              if not condition:
+                  raise SystemExit(message)
+
+          backend = inspect(sys.argv[1])
+          frontend = inspect(sys.argv[2])
+
+          expected_frontend_binding = [
+              {"HostIp": "127.0.0.1", "HostPort": "8081"}
+          ]
+          require(
+              backend["HostConfig"]["PortBindings"] == {},
+              "Backend must not publish a host port",
+          )
+          require(
+              frontend["NetworkSettings"]["Ports"].get("8080/tcp")
+              == expected_frontend_binding,
+              "Frontend 8080/tcp must bind only to 127.0.0.1:8081",
+          )
+
+          expected = {
+              "backend": {
+                  "container": backend,
+                  "user": "quoteflow",
+                  "memory": 768 * 1024 * 1024,
+                  "memory_swap": 1024 * 1024 * 1024,
+                  "nano_cpus": 1_000_000_000,
+                  "pids": 128,
+                  "tmpfs": {"/tmp"},
+              },
+              "frontend": {
+                  "container": frontend,
+                  "user": "101",
+                  "memory": 256 * 1024 * 1024,
+                  "memory_swap": 384 * 1024 * 1024,
+                  "nano_cpus": 500_000_000,
+                  "pids": 64,
+                  "tmpfs": {"/tmp", "/var/cache/nginx", "/var/run"},
+              },
+          }
+          for service, values in expected.items():
+              container = values["container"]
+              host = container["HostConfig"]
+              require(
+                  container["Config"]["User"] == values["user"],
+                  f"{service}: unexpected runtime user {container['Config']['User']!r}",
               )
+              require(host["ReadonlyRootfs"] is True, f"{service}: rootfs is writable")
+              require(host["Privileged"] is False, f"{service}: privileged mode enabled")
+              require(host["Binds"] in (None, []), f"{service}: bind mounts present")
+              require(host["Mounts"] in (None, []), f"{service}: managed mounts present")
+              require(
+                  set((host["Tmpfs"] or {}).keys()) == values["tmpfs"],
+                  f"{service}: unexpected tmpfs paths {host['Tmpfs']!r}",
+              )
+              require(host["CapDrop"] == ["ALL"], f"{service}: capabilities not dropped")
+              require(
+                  "no-new-privileges:true" in (host["SecurityOpt"] or []),
+                  f"{service}: no-new-privileges missing",
+              )
+              require(host["PidsLimit"] == values["pids"], f"{service}: PID limit mismatch")
+              require(host["Memory"] == values["memory"], f"{service}: memory limit mismatch")
+              require(
+                  host["MemorySwap"] == values["memory_swap"],
+                  f"{service}: memory+swap limit mismatch",
+              )
+              require(host["NanoCpus"] == values["nano_cpus"], f"{service}: CPU limit mismatch")
+              require(
+                  container["Config"].get("Healthcheck", {}).get("Test"),
+                  f"{service}: healthcheck missing",
+              )
+              require(
+                  host["LogConfig"]["Type"] == "json-file"
+                  and host["LogConfig"]["Config"]
+                  == {"max-file": "3", "max-size": "10m"},
+                  f"{service}: bounded json-file logging mismatch",
+              )
+              require(
+                  host["RestartPolicy"]["Name"] == "unless-stopped",
+                  f"{service}: restart policy mismatch",
+              )
+
+          print("Production runtime metadata verified")
           PY
