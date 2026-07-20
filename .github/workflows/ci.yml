@@ -142,6 +142,8 @@ jobs:
             rm -f "$history_file"
           done
       - name: Scan backend runtime image
+        id: scan-backend
+        continue-on-error: true
         # aquasecurity/trivy-action v0.35.0 (Trivy v0.69.3)
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
         with:
@@ -153,6 +155,8 @@ jobs:
           format: table
           exit-code: "1"
       - name: Scan frontend runtime image
+        id: scan-frontend
+        continue-on-error: true
         # aquasecurity/trivy-action v0.35.0 (Trivy v0.69.3)
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
         with:
@@ -163,6 +167,16 @@ jobs:
           ignore-unfixed: false
           format: table
           exit-code: "1"
+      - name: Enforce runtime vulnerability gate
+        if: always()
+        env:
+          BACKEND_SCAN_OUTCOME: ${{ steps.scan-backend.outcome }}
+          FRONTEND_SCAN_OUTCOME: ${{ steps.scan-frontend.outcome }}
+        run: |
+          if [ "$BACKEND_SCAN_OUTCOME" != "success" ] || [ "$FRONTEND_SCAN_OUTCOME" != "success" ]; then
+            echo "At least one runtime image has HIGH/CRITICAL vulnerability findings" >&2
+            exit 1
+          fi
       - name: Smoke production Compose boundary
         env:
           COMPOSE_PROJECT_NAME: quoteflow-ci-${{ github.run_id }}
