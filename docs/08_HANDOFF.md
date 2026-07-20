@@ -2,15 +2,15 @@
 
 ## Текущий статус
 
-Этап 6 завершён и проверен. Implementation commit:
+Stage 7A release-readiness завершён и проверен. Implementation commit:
 
-`63833f88f97da1406a2b8ae0341e90da806aa5e2`
+`eb3f14c45c19048d615a2356a065d4eb5b1819e3`
 
-Добавлен и сквозным образом проверен локальный Docker Compose-контур с Nginx frontend и внутренним FastAPI backend. Это production-like local integration environment, а не deployment. Репозиторий остаётся приватным; лицензия и публикация не согласованы. PDF endpoint из UI по-прежнему не вызывается.
+Добавлены отдельный frontend server-PDF download и GitHub Actions CI. Browser print остаётся независимым. Первый workflow run `CI #1` завершился успешно. Репозиторий остаётся приватным; лицензия, публикация и deployment не согласованы.
 
 ## Проверенное состояние
 
-- frontend: 135 tests, production build и type-check проходят;
+- frontend: 158 tests, production build и type-check проходят;
 - backend: 78 tests и application import/startup check проходят;
 - TypeScript calculation core использует `bigint`, Python — `int`;
 - UI adapters преобразуют ruble/percent strings точной integer arithmetic;
@@ -29,6 +29,9 @@
 - DejaVu Sans assets и license включены в wheel через явную package-data configuration;
 - установленный wheel вне source checkout успешно генерирует PDF с извлекаемой кириллицей;
 - browser print доступен только для валидного расчёта с непустым названием и не вызывает backend;
+- отдельный server PDF action отправляет только strict input и доступен при тех же validity/project-name условиях;
+- PDF client ограничивает фактически прочитанный stream 2 MiB, проверяет MIME и `%PDF-`, использует фиксированный filename;
+- 15-second timeout, replacement/edit/reset/import/open/unmount abort и newest-only download покрыты тестами;
 - длинный PDF и print-table поддерживают многостраничность и повторение заголовка;
 - JSON export не содержит draft metadata, timestamps, request IDs или totals;
 - JSON import ограничен 256 KiB, требует versioned envelope и сохраняет текущий draft при ошибке;
@@ -50,13 +53,15 @@
 - npm и pip audits не выявили известных уязвимостей на момент Stage 6;
 - staging и patch прошли whitespace review;
 - реальных данных и секретов не добавлено;
-- working tree владельца после push был чистым.
+- working tree владельца после push был чистым;
+- CI использует read-only permissions, pinned official actions, disabled credential persistence и finite timeouts;
+- frontend/backend/Docker CI jobs первого Stage 7A workflow завершились успешно; publication и deployment jobs отсутствуют.
 
 ## Следующий этап
 
-Этап 7: отдельное решение о публикации и deployment.
+Stage 7B: отдельное решение о публикации и deployment.
 
-До начала Stage 7 необходимо получить явное решение владельца по каждому внешнему изменению. Возможные задачи после такого решения:
+До начала Stage 7B необходимо получить явное решение владельца по каждому внешнему изменению. Возможные задачи после такого решения:
 
 - выбрать, остаётся ли репозиторий приватным;
 - согласовать лицензию до добавления license-файла проекта;
@@ -89,11 +94,11 @@
 
 ## Разделение ответственности
 
-Codex изменяет code, tests, fixtures, styles и необходимые technical configuration files. Codex не изменяет `README.md` или `docs/**`.
+GPT может читать и изменять любые доступные файлы GitHub, если это прямо входит в согласованный scope и не конфликтует с незакоммиченными локальными изменениями.
 
-GPT проводит review кода из GitHub и самостоятельно ведёт документацию.
+Codex используется преимущественно для сложной локальной реализации кода. Для экономии токенов рутинные GitHub-операции, документацию, review и небольшие безопасные изменения выполняет GPT; локальные команды и проверки может выполнять владелец.
 
-Владелец выполняет commit/push только после review и затем синхронизирует документационные commits GPT.
+При dirty local working tree удалённые code/config changes откладываются до commit/push и синхронизации. Владелец выполняет локальные commit/push и validation, если отдельно не согласован GitHub write workflow.
 
 ## Постоянные ограничения
 
@@ -103,5 +108,6 @@ GPT проводит review кода из GitHub и самостоятельно
 - не публиковать repository;
 - не выполнять deployment;
 - не добавлять зависимости вне согласованного scope;
-- не выполнять commit/push из Codex;
-- не изменять `README.md` и `docs/**` из Codex.
+- не выполнять commit/push из Codex без отдельного прямого разрешения;
+- не изменять `README.md` и `docs/**` из Codex без отдельного прямого разрешения;
+- не запускать Stage 7B без отдельного решения владельца.
