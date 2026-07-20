@@ -131,12 +131,32 @@
 
 Stage 6 не выполнял publication или deployment и не менял calculation, exchange, storage или PDF contracts.
 
-## Этап 7 — публикация и deployment
+## Stage 7A — release readiness
 
-Статус: **следующий только после отдельного решения владельца**.
+Статус: **завершён**.
+
+Реализованы и проверены:
+
+- отдельное действие server PDF download без смешения с browser print;
+- strict same-origin PDF client с безопасным request ID и 15-second timeout;
+- bounded streaming response до 2 MiB, early cancel, MIME и `%PDF-` validation;
+- replacement/edit/reset/import/open/unmount abort и newest-request-only download;
+- фиксированное безопасное имя файла и browser resource cleanup;
+- GitHub Actions CI для push/PR в `main`;
+- read-only permissions, disabled checkout credential persistence, pinned official actions и finite job timeouts;
+- frontend, backend и Docker build jobs без publication/deployment;
+- 158 frontend tests, production build и TypeScript check;
+- 78 backend tests и Docker Compose build/health/smoke;
+- успешный первый workflow run `CI #1` для implementation commit.
+
+Проверенный implementation commit: `eb3f14c45c19048d615a2356a065d4eb5b1819e3`.
+
+## Stage 7B — публикация и deployment
+
+Статус: **не начат; только после отдельного решения владельца**.
 
 - принять решение о сохранении приватности или публичной публикации;
 - согласовать лицензию до её добавления;
 - повторить publication/security audit непосредственно перед изменением видимости;
-- определить production platform, TLS, secrets, CORS, rate limiting, logging и monitoring до deployment;
+- определить production platform, TLS, secrets, CORS, rate limiting, logging, monitoring и rollback до deployment;
 - public GitHub и live deployment выполнять только после явного отдельного согласования.
