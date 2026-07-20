@@ -2,7 +2,7 @@
 
 QuoteFlow нельзя описывать как полностью безопасный. Документ фиксирует реализованные границы и требования, которые остаются обязательными перед публичным размещением.
 
-## Реализовано на Этапах 2–6
+## Реализовано на Этапах 2–7A
 
 - секреты и `.env` исключены через `.gitignore`;
 - `.env.example` содержит только безопасные локальные значения;
@@ -47,7 +47,12 @@ QuoteFlow нельзя описывать как полностью безопа
 - multi-stage images отделяют build tooling от runtime; backend runtime не содержит test dependencies и wheel directory, frontend runtime не содержит Node/npm;
 - host и container smoke tests подтвердили safe JSON errors, request ID boundaries, strict validation и in-memory PDF через reverse proxy;
 - `npm audit`, production-only npm audit и отдельные runtime/test `pip-audit` проверки не выявили известных уязвимостей на момент Stage 6;
-- browser QA на шести viewports не выявил horizontal overflow, а automated axe scan сообщил 0 violations.
+- browser QA на шести viewports не выявил horizontal overflow, а automated axe scan сообщил 0 violations;
+- server PDF download использует безопасный outbound request ID, 15-second timeout и синхронную invalidation generation для replacement/edit/reset/import/open/unmount;
+- PDF response читается bounded stream до 2 MiB с early cancel, проверяется по MIME, непустому body и `%PDF-` signature;
+- client не доверяет server filename: используется фиксированное `quoteflow-proposal.pdf`, временные anchor/object URL гарантированно очищаются;
+- GitHub Actions CI имеет только `contents: read`, checkout credentials не сохраняются, official actions закреплены полными commit SHA, jobs имеют finite timeouts;
+- CI не публикует images/packages/releases, не выполняет deployment и не получает application secrets; первый Stage 7A run завершился успешно.
 
 ## Threat model MVP
 
@@ -92,6 +97,8 @@ CSV создаётся только из валидного локального
 ## PDF boundaries
 
 PDF реализован на backend через ReportLab Platypus. Пользовательский текст обрабатывается как данные и экранируется до передачи в markup-aware объекты. Backend принимает только строгий `QuoteCalculationInput`, не принимает произвольный template, HTML, URL, filename или filesystem path и использует фиксированное безопасное имя ответа.
+
+Frontend server-PDF client считает response недоверенным: ограничивает фактически прочитанный stream 2 MiB, отменяет oversized/obsolete stream, проверяет MIME и `%PDF-` signature и не использует filename из response. Browser print остаётся отдельной локальной функцией.
 
 Документ создаётся в `BytesIO` без записи пользовательских данных на диск. Кириллица обеспечивается локально включёнными DejaVu Sans; wheel smoke test подтверждает доступность шрифтов из установленного пакета. PDF generation не означает, что сервис пригоден для обработки реальных конфиденциальных данных или публичного deployment.
 
