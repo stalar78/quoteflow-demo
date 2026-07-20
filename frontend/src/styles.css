@@ -23,6 +23,35 @@ body {
   background: #f7f5f0;
 }
 
+#root,
+#root > div,
+main,
+main > *,
+main section,
+main article,
+main aside,
+main fieldset,
+main .grid,
+main .flex {
+  min-width: 0;
+}
+
+main > *,
+main section,
+main article,
+main aside,
+main pre {
+  max-width: 100%;
+}
+
+main h1,
+main h2,
+main h3,
+main p,
+main output {
+  overflow-wrap: anywhere;
+}
+
 button,
 input,
 textarea {
@@ -34,6 +63,18 @@ input:focus-visible,
 textarea:focus-visible {
   outline: 3px solid #2f8ea3;
   outline-offset: 2px;
+}
+
+@media (max-width: 639px) {
+  main button,
+  main label[for] {
+    max-width: 100%;
+  }
+
+  main button {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
