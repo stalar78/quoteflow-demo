@@ -314,7 +314,7 @@ jobs:
               require(host["ReadonlyRootfs"] is True, f"{service}: rootfs is writable")
               require(host["Privileged"] is False, f"{service}: privileged mode enabled")
               require(host["Binds"] in (None, []), f"{service}: bind mounts present")
-              require(host["Mounts"] in (None, []), f"{service}: managed mounts present")
+              require(container["Mounts"] == [], f"{service}: managed mounts present")
               require(
                   set((host["Tmpfs"] or {}).keys()) == values["tmpfs"],
                   f"{service}: unexpected tmpfs paths {host['Tmpfs']!r}",
