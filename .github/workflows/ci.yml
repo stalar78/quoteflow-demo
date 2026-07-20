@@ -122,7 +122,9 @@ jobs:
           docker compose --env-file .env.production.example -f compose.production.yaml up -d --wait
           curl --fail --silent --show-error http://127.0.0.1:8081/ >/dev/null
           curl --fail --silent --show-error http://127.0.0.1:8081/api/health
-          if docker compose --env-file .env.production.example -f compose.production.yaml port backend 8000 2>/dev/null | grep -q .; then
+          backend_id="$(docker compose --env-file .env.production.example -f compose.production.yaml ps -q backend)"
+          if [ "$(docker inspect --format '{{json .HostConfig.PortBindings}}' "$backend_id")" != "{}" ]; then
             echo "Backend port must not be published on the host" >&2
+            docker inspect --format '{{json .HostConfig.PortBindings}}' "$backend_id" >&2
             exit 1
           fi
