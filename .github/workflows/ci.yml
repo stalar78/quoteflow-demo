@@ -104,7 +104,25 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           persist-credentials: false
-      - name: Validate Compose config
+      - name: Validate local Compose config
         run: docker compose config --quiet
-      - name: Build Compose images
-        run: docker compose build --pull
+      - name: Validate production Compose config
+        run: docker compose --env-file .env.production.example -f compose.production.yaml config --quiet
+      - name: Build production Compose images
+        run: docker compose --env-file .env.production.example -f compose.production.yaml build --pull
+      - name: Smoke production Compose boundary
+        env:
+          COMPOSE_PROJECT_NAME: quoteflow-ci-${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          cleanup() {
+            docker compose --env-file .env.production.example -f compose.production.yaml down --remove-orphans
+          }
+          trap cleanup EXIT
+          docker compose --env-file .env.production.example -f compose.production.yaml up -d --wait
+          curl --fail --silent --show-error http://127.0.0.1:8081/ >/dev/null
+          curl --fail --silent --show-error http://127.0.0.1:8081/api/health
+          if docker compose --env-file .env.production.example -f compose.production.yaml port backend 8000 2>/dev/null | grep -q .; then
+            echo "Backend port must not be published on the host" >&2
+            exit 1
+          fi
