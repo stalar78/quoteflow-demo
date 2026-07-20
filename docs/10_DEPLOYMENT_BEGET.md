@@ -61,9 +61,20 @@ sudo ufw status verbose
 getent hosts quoteflow.stalarvision.ru
 ```
 
+Фактический read-only review VPS подтвердил:
+
+- Ubuntu 24.04;
+- 2 CPU;
+- 4 GiB RAM;
+- 2 GiB swap;
+- работающий системный Nginx;
+- существующий deployment `elagin-portal`, который нельзя затрагивать;
+- активный UFW разрешает только `22/tcp`, `80/tcp` и `443/tcp`;
+- `127.0.0.1:8081` свободен.
+
 Перед продолжением требуется:
 
-- поддерживаемая Ubuntu и работающий Docker Engine с Compose plugin;
+- работающий Docker Engine с Compose plugin;
 - работающий system Nginx и Certbot;
 - свободный `127.0.0.1:8081`;
 - минимум 5 GiB свободного диска для build/image/rollback reserve;
@@ -73,7 +84,12 @@ getent hosts quoteflow.stalarvision.ru
 - нет конфликтующего `server_name quoteflow.stalarvision.ru`;
 - рабочий каталог QuoteFlow отделён от каталога `site-stalarvision`.
 
-Порог RAM намеренно не зафиксирован до просмотра фактической нагрузки сервера. Resource limits контейнеров добавляются только после этого review.
+По результатам resource review в production Compose установлены limits:
+
+- backend: `768 MiB` RAM, `1 GiB` memory+swap, `1.00` CPU;
+- frontend: `256 MiB` RAM, `384 MiB` memory+swap, `0.50` CPU.
+
+Суммарные limits оставляют запас для system Nginx, Docker daemon, `elagin-portal` и операционной системы. Перед deployment всё равно требуется проверить текущую фактическую нагрузку и свободный диск; UFW не должен открывать `8081`.
 
 ## Безопасность владельца
 
