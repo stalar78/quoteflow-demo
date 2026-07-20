@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { createNewDraft, type EditableDraft } from "./features/calculation/editableTypes";
@@ -82,6 +83,22 @@ function matchingApiResponse(body: { items: Array<{ id: string }> }, requestId =
   );
 }
 
+function pdfResponse(requestId = "server-pdf-id") {
+  return new Response(toExactArrayBuffer(new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31])), {
+    headers: {
+      "content-type": "application/pdf",
+      "content-length": "6",
+      "x-request-id": requestId
+    }
+  });
+}
+
+function mockObjectUrl() {
+  vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:server-pdf");
+  vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+}
+
 describe("QuoteFlow UI", () => {
   beforeEach(() => {
     vi.useRealTimers();
@@ -102,6 +119,17 @@ describe("QuoteFlow UI", () => {
 
     expect(screen.getByText("Позиция 1")).toBeInTheDocument();
     expect(screen.getAllByLabelText("Название", { selector: "input" })).toHaveLength(1);
+  });
+
+  it("keeps the initial server PDF status under Strict Mode", () => {
+    render(
+      <StrictMode>
+        <App />
+      </StrictMode>
+    );
+
+    expect(screen.getByText("Серверный PDF ещё не формировался.")).toBeInTheDocument();
+    expect(screen.queryByText("Серверный PDF сброшен после изменения расчёта.")).not.toBeInTheDocument();
   });
 
   it("does not show required-field validation before interaction", () => {
@@ -473,6 +501,169 @@ describe("QuoteFlow UI", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("keeps browser print independent from server PDF", async () => {
+    const printSpy = vi.spyOn(window, "print").mockImplementation(() => undefined);
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(pdfResponse());
+    const { user } = renderApp();
+
+    await user.type(screen.getByLabelText("Название проекта"), "PDF actions");
+    await fillValidSingleItem(user);
+    await user.click(screen.getByRole("button", { name: "Печать / сохранить PDF" }));
+
+    expect(printSpy).toHaveBeenCalledTimes(1);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("enables server PDF only for a valid document calculation", async () => {
+    const { user } = renderApp();
+
+    expect(screen.getByRole("button", { name: "Скачать PDF с сервера" })).toBeDisabled();
+
+    await user.type(screen.getByLabelText("Название", { selector: "input" }), "Прототип");
+    await user.type(screen.getByLabelText("Количество"), "2");
+    await user.type(screen.getByLabelText("Цена, ₽"), "1500");
+    expect(screen.getByRole("button", { name: "Скачать PDF с сервера" })).toBeDisabled();
+
+    await user.type(screen.getByLabelText("Название проекта"), "PDF actions");
+    expect(screen.getByRole("button", { name: "Скачать PDF с сервера" })).toBeEnabled();
+  });
+
+  it("downloads server PDF after an explicit click with strict payload and fixed filename", async () => {
+    vi.spyOn(crypto, "getRandomValues").mockImplementation((array) => {
+      (array as Uint8Array).fill(2);
+      return array;
+    });
+    mockObjectUrl();
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(pdfResponse());
+    const { user } = renderApp();
+
+    await user.type(screen.getByLabelText("Название проекта"), "PDF actions");
+    await fillValidSingleItem(user);
+    await user.click(screen.getByRole("button", { name: "Скачать PDF с сервера" }));
+
+    expect(await screen.findByText("PDF с сервера сформирован и передан браузеру для скачивания.")).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [, init] = fetchMock.mock.calls[0];
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/documents/pdf");
+    expect((init as RequestInit).headers).toEqual({
+      "Content-Type": "application/json",
+      "X-Request-ID": "ui-02020202020202020202020202020202"
+    });
+    const payload = JSON.parse((init as RequestInit).body as string);
+    expect(payload.projectName).toBe("PDF actions");
+    expect(payload).not.toHaveProperty("totalMinor");
+    expect(payload).not.toHaveProperty("createdAt");
+    expect(document.querySelector('a[download="quoteflow-proposal.pdf"]')).not.toBeInTheDocument();
+  });
+
+  it("shows a server PDF error without exposing malformed response bodies", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("<html>stack</html>", { status: 500, headers: { "content-type": "text/html" } })
+    );
+    const { user } = renderApp();
+
+    await user.type(screen.getByLabelText("Название проекта"), "PDF actions");
+    await fillValidSingleItem(user);
+    await user.click(screen.getByRole("button", { name: "Скачать PDF с сервера" }));
+
+    expect(await screen.findByText("PDF API сообщил о внутренней ошибке.")).toBeInTheDocument();
+    expect(screen.queryByText(/stack/)).not.toBeInTheDocument();
+  });
+
+  it("times out server PDF requests distinctly from ordinary aborts", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      (_url, init) =>
+        new Promise((_resolve, reject) => {
+          (init as RequestInit).signal?.addEventListener("abort", () =>
+            reject(new DOMException("aborted", "AbortError"))
+          );
+        })
+    );
+    renderApp();
+
+    fireEvent.change(screen.getByLabelText("Название проекта"), { target: { value: "PDF actions" } });
+    fireEvent.change(screen.getByLabelText("Название", { selector: "input" }), {
+      target: { value: "Прототип" }
+    });
+    fireEvent.change(screen.getByLabelText("Количество"), { target: { value: "2" } });
+    fireEvent.change(screen.getByLabelText("Цена, ₽"), { target: { value: "1500" } });
+    fireEvent.click(screen.getByRole("button", { name: "Скачать PDF с сервера" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000);
+    });
+
+    expect(screen.getByText("PDF API не ответил за 15 секунд. Повторите загрузку.")).toBeInTheDocument();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
+  });
+
+  it("aborts and replaces in-flight server PDF requests", async () => {
+    mockObjectUrl();
+    const first = deferred<Response>();
+    const second = deferred<Response>();
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementationOnce(async () => first.promise)
+      .mockImplementationOnce(async () => second.promise);
+    const { user } = renderApp();
+
+    await user.type(screen.getByLabelText("Название проекта"), "PDF actions");
+    await fillValidSingleItem(user);
+    await user.click(screen.getByRole("button", { name: "Скачать PDF с сервера" }));
+    const firstSignal = (fetchMock.mock.calls[0][1] as RequestInit).signal as AbortSignal;
+    expect(screen.getByText("Формируем PDF на сервере...")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Формируем PDF..." }));
+    expect(firstSignal.aborted).toBe(true);
+    first.resolve(pdfResponse("server-stale"));
+    second.resolve(pdfResponse("server-current"));
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(await screen.findByText(/server-current/)).toBeInTheDocument();
+    expect(screen.queryByText(/server-stale/)).not.toBeInTheDocument();
+    expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledTimes(1);
+  });
+
+  it("aborts server PDF after editing and ignores stale responses", async () => {
+    mockObjectUrl();
+    const first = deferred<Response>();
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementationOnce(async () => first.promise);
+    const { user } = renderApp();
+
+    await user.type(screen.getByLabelText("Название проекта"), "PDF actions");
+    await fillValidSingleItem(user);
+    await user.click(screen.getByRole("button", { name: "Скачать PDF с сервера" }));
+    const signal = (fetchMock.mock.calls[0][1] as RequestInit).signal as AbortSignal;
+    await user.type(screen.getByLabelText("Название проекта"), " updated");
+    expect(signal.aborted).toBe(true);
+    first.resolve(pdfResponse("server-stale"));
+    await Promise.resolve();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText("Серверный PDF сброшен после изменения расчёта.")).toBeInTheDocument();
+    expect(screen.queryByText(/server-stale/)).not.toBeInTheDocument();
+    expect(HTMLAnchorElement.prototype.click).not.toHaveBeenCalled();
+  });
+
+  it("aborts server PDF on unmount and ignores the late response", async () => {
+    mockObjectUrl();
+    const first = deferred<Response>();
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementationOnce(async () => first.promise);
+    const { user, unmount } = renderApp();
+
+    await user.type(screen.getByLabelText("Название проекта"), "PDF actions");
+    await fillValidSingleItem(user);
+    await user.click(screen.getByRole("button", { name: "Скачать PDF с сервера" }));
+    const signal = (fetchMock.mock.calls[0][1] as RequestInit).signal as AbortSignal;
+
+    unmount();
+    expect(signal.aborted).toBe(true);
+    first.resolve(pdfResponse("server-stale"));
+    await Promise.resolve();
+
+    expect(HTMLAnchorElement.prototype.click).not.toHaveBeenCalled();
+  });
+
   it("sends preview API request only after explicit click", async () => {
     vi.spyOn(crypto, "getRandomValues").mockImplementation((array) => {
       (array as Uint8Array).fill(1);
@@ -716,3 +907,7 @@ describe("QuoteFlow UI", () => {
     expect(screen.getByText("JSON импортирован. Черновик заменён после строгой проверки.")).toBeInTheDocument();
   });
 });
+
+function toExactArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+}

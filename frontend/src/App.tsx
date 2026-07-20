@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppHeader } from "./components/AppHeader";
 import { DemoNotice } from "./components/DemoNotice";
 import { CalculationForm } from "./features/calculation/CalculationForm";
@@ -18,12 +18,31 @@ import {
   loadDrafts,
   saveDraft
 } from "./features/drafts/draftStorage";
+import {
+  downloadServerPdfBlob,
+  requestServerPdf
+} from "./features/documents/pdfClient";
 import { DataExchangePanel } from "./features/exchange/DataExchangePanel";
 
 type Feedback = {
   tone: "success" | "error" | "neutral";
   text: string;
 };
+
+type ServerPdfState =
+  | { status: "idle"; message: string }
+  | { status: "loading"; message: string }
+  | { status: "success"; message: string; requestId?: string }
+  | { status: "error"; message: string; requestId?: string };
+
+type ServerPdfRequest = {
+  controller: AbortController;
+  generation: number;
+  timeoutId: number;
+  timedOut: boolean;
+};
+
+const SERVER_PDF_TIMEOUT_MS = 15_000;
 
 export function App() {
   const [draft, setDraft] = useState<EditableDraft>(() => createNewDraft());
@@ -33,8 +52,51 @@ export function App() {
     tone: "neutral",
     text: drafts.warning ?? "Черновики хранятся только в этом браузере."
   });
+  const [serverPdfState, setServerPdfState] = useState<ServerPdfState>({
+    status: "idle",
+    message: "Серверный PDF ещё не формировался."
+  });
+  const serverPdfRequestRef = useRef<ServerPdfRequest | null>(null);
+  const serverPdfGenerationRef = useRef(0);
 
   const calculation = useMemo(() => evaluateDraft(draft), [draft]);
+
+  const abortServerPdfRequest = useCallback(() => {
+    if (!serverPdfRequestRef.current) {
+      return;
+    }
+    window.clearTimeout(serverPdfRequestRef.current.timeoutId);
+    serverPdfRequestRef.current.controller.abort();
+    serverPdfRequestRef.current = null;
+  }, []);
+
+  const invalidateServerPdf = useCallback(
+    (message?: string) => {
+      serverPdfGenerationRef.current += 1;
+      abortServerPdfRequest();
+      if (message) {
+        setServerPdfState({
+          status: "idle",
+          message
+        });
+      }
+    },
+    [abortServerPdfRequest]
+  );
+
+  useEffect(() => {
+    return () => {
+      invalidateServerPdf();
+    };
+  }, [invalidateServerPdf]);
+
+  const replaceDraft = useCallback(
+    (nextDraft: EditableDraft) => {
+      invalidateServerPdf("Серверный PDF сброшен после изменения расчёта.");
+      setDraft(nextDraft);
+    },
+    [invalidateServerPdf]
+  );
 
   const resetTouched = useCallback(() => {
     setTouchedFields(new Set());
@@ -49,9 +111,13 @@ export function App() {
     return loaded;
   }, []);
 
-  const updateDraft = useCallback((updater: (current: EditableDraft) => EditableDraft) => {
-    setDraft((current) => updater(current));
-  }, []);
+  const updateDraft = useCallback(
+    (updater: (current: EditableDraft) => EditableDraft) => {
+      invalidateServerPdf("Серверный PDF сброшен после изменения расчёта.");
+      setDraft((current) => updater(current));
+    },
+    [invalidateServerPdf]
+  );
 
   const markFieldTouched = useCallback((field: string) => {
     setTouchedFields((current) => {
@@ -65,16 +131,18 @@ export function App() {
   }, []);
 
   const startNew = useCallback(() => {
+    invalidateServerPdf("Серверный PDF сброшен для нового расчёта.");
     setDraft(createNewDraft());
     resetTouched();
     setFeedback({ tone: "neutral", text: "Создан новый пустой расчёт." });
-  }, [resetTouched]);
+  }, [invalidateServerPdf, resetTouched]);
 
   const fillDemo = useCallback(() => {
+    invalidateServerPdf("Серверный PDF сброшен после демо-примера.");
     setDraft(createDemoDraft());
     resetTouched();
     setFeedback({ tone: "neutral", text: "Добавлен синтетический демо-пример." });
-  }, [resetTouched]);
+  }, [invalidateServerPdf, resetTouched]);
 
   const handleSave = useCallback(() => {
     const result = saveDraft(draft);
@@ -94,11 +162,12 @@ export function App() {
         setFeedback({ tone: "error", text: "Черновик не найден." });
         return;
       }
+      invalidateServerPdf("Серверный PDF сброшен после открытия черновика.");
       setDraft(found);
       resetTouched();
       setFeedback({ tone: "success", text: "Черновик открыт." });
     },
-    [refreshDrafts, resetTouched]
+    [invalidateServerPdf, refreshDrafts, resetTouched]
   );
 
   const handleDelete = useCallback((id: string) => {
@@ -149,13 +218,83 @@ export function App() {
     window.print();
   }, []);
 
+  const downloadServerPdf = useCallback(async () => {
+    if (!calculation.ok || calculation.input.projectName.trim() === "") {
+      setServerPdfState({
+        status: "error",
+        message: "Заполните валидный расчёт и название проекта."
+      });
+      return;
+    }
+
+    abortServerPdfRequest();
+    const controller = new AbortController();
+    const generation = serverPdfGenerationRef.current;
+    const request: ServerPdfRequest = {
+      controller,
+      generation,
+      timeoutId: 0,
+      timedOut: false
+    };
+    request.timeoutId = window.setTimeout(() => {
+      request.timedOut = true;
+      controller.abort();
+    }, SERVER_PDF_TIMEOUT_MS);
+    serverPdfRequestRef.current = request;
+    setServerPdfState({ status: "loading", message: "Формируем PDF на сервере..." });
+
+    const response = await requestServerPdf(calculation.input, controller.signal);
+    window.clearTimeout(request.timeoutId);
+    if (serverPdfRequestRef.current !== request || serverPdfGenerationRef.current !== generation) {
+      return;
+    }
+    serverPdfRequestRef.current = null;
+
+    if (!response.ok) {
+      if (request.timedOut) {
+        setServerPdfState({
+          status: "error",
+          message: "PDF API не ответил за 15 секунд. Повторите загрузку."
+        });
+        return;
+      }
+      if (response.canceled || controller.signal.aborted) {
+        return;
+      }
+      setServerPdfState({
+        status: "error",
+        message: response.message,
+        requestId: response.requestId
+      });
+      return;
+    }
+
+    try {
+      downloadServerPdfBlob(response.blob);
+    } catch {
+      setServerPdfState({
+        status: "error",
+        message: "PDF сформирован, но браузер не запустил скачивание.",
+        requestId: response.requestId
+      });
+      return;
+    }
+
+    setServerPdfState({
+      status: "success",
+      message: "PDF с сервера сформирован и передан браузеру для скачивания.",
+      requestId: response.requestId
+    });
+  }, [abortServerPdfRequest, calculation]);
+
   const importDraft = useCallback(
     (nextDraft: EditableDraft, message: string) => {
+      invalidateServerPdf("Серверный PDF сброшен после импорта JSON.");
       setDraft(nextDraft);
       resetTouched();
       setFeedback({ tone: "success", text: message });
     },
-    [resetTouched]
+    [invalidateServerPdf, resetTouched]
   );
 
   return (
@@ -168,12 +307,14 @@ export function App() {
             calculation={calculation}
             draft={draft}
             feedback={feedback}
+            serverPdfState={serverPdfState}
             onAddItem={addItem}
-            onDraftChange={setDraft}
+            onDraftChange={replaceDraft}
             onFieldBlur={markFieldTouched}
             onFillDemo={fillDemo}
             onPrint={printCalculation}
             onRemoveItem={removeItem}
+            onServerPdfDownload={downloadServerPdf}
             touchedFields={touchedFields}
           />
           <aside className="flex min-w-0 flex-col gap-7 xl:sticky xl:top-6">

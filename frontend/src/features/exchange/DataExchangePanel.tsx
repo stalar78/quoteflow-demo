@@ -210,7 +210,10 @@ export function DataExchangePanel({ calculation, onImportDraft }: DataExchangePa
             Просмотр payload ничего не отправляет.
           </p>
           {calculation.ok ? (
-            <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-slate-200 bg-slate-950 p-4 text-[12px] leading-5 text-slate-50">
+            <pre
+              className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-slate-200 bg-slate-950 p-4 text-[12px] leading-5 text-slate-50"
+              tabIndex={0}
+            >
               {payloadPreview}
             </pre>
           ) : (

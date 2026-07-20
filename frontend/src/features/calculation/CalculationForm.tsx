@@ -8,6 +8,11 @@ type CalculationFormProps = {
   draft: EditableDraft;
   calculation: DraftEvaluation;
   feedback: Feedback;
+  serverPdfState: {
+    status: "idle" | "loading" | "success" | "error";
+    message: string;
+    requestId?: string;
+  };
   touchedFields: ReadonlySet<string>;
   onDraftChange: (draft: EditableDraft) => void;
   onFieldBlur: (field: string) => void;
@@ -15,6 +20,7 @@ type CalculationFormProps = {
   onRemoveItem: (id: string) => void;
   onFillDemo: () => void;
   onPrint: () => void;
+  onServerPdfDownload: () => void;
 };
 
 function updateDraftField<K extends keyof EditableDraft>(
@@ -29,17 +35,20 @@ export function CalculationForm({
   draft,
   calculation,
   feedback,
+  serverPdfState,
   touchedFields,
   onDraftChange,
   onFieldBlur,
   onAddItem,
   onRemoveItem,
   onFillDemo,
-  onPrint
+  onPrint,
+  onServerPdfDownload
 }: CalculationFormProps) {
   const errors = calculation.fieldErrors;
   const getFieldError = (field: string) => (touchedFields.has(field) ? errors[field] : undefined);
-  const canPrint = calculation.ok && calculation.input.projectName.trim() !== "";
+  const canCreateDocument = calculation.ok && calculation.input.projectName.trim() !== "";
+  const canRequestServerPdf = canCreateDocument;
 
   return (
     <div className="flex min-w-0 flex-col gap-7">
@@ -61,7 +70,7 @@ export function CalculationForm({
             >
               Заполнить демо-пример
             </button>
-            {canPrint ? (
+            {canCreateDocument ? (
               <button
                 className="min-h-11 shrink-0 whitespace-nowrap rounded-lg bg-teal-700 px-5 py-2.5 text-[15px] font-semibold text-white shadow-sm transition hover:bg-teal-800"
                 type="button"
@@ -70,11 +79,40 @@ export function CalculationForm({
                 Печать / сохранить PDF
               </button>
             ) : null}
+            <button
+              className="min-h-11 shrink-0 whitespace-nowrap rounded-lg border border-teal-700 bg-white px-5 py-2.5 text-[15px] font-semibold text-teal-800 shadow-sm transition hover:bg-teal-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400 disabled:opacity-70"
+              type="button"
+              disabled={!canRequestServerPdf}
+              onClick={onServerPdfDownload}
+            >
+              {serverPdfState.status === "loading"
+                ? "Формируем PDF..."
+                : "Скачать PDF с сервера"}
+            </button>
           </div>
         </div>
         <p
           className={[
             "mt-5 rounded-lg px-4 py-3 text-[15px] leading-6",
+            serverPdfState.status === "error"
+              ? "bg-red-50 text-red-800"
+              : serverPdfState.status === "success"
+                ? "bg-teal-50 text-teal-800"
+                : "bg-slate-50 text-slate-600"
+          ].join(" ")}
+          role="status"
+          aria-live="polite"
+        >
+          {serverPdfState.message}
+          {serverPdfState.requestId ? (
+            <span className="mt-2 block break-all text-[13px] leading-5">
+              Request ID: <span className="font-mono">{serverPdfState.requestId}</span>
+            </span>
+          ) : null}
+        </p>
+        <p
+          className={[
+            "mt-4 rounded-lg px-4 py-3 text-[15px] leading-6",
             feedback.tone === "error"
               ? "bg-red-50 text-red-800"
               : feedback.tone === "success"
