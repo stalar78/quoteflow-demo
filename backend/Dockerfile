@@ -1,4 +1,4 @@
-FROM python:3.14.3-slim-bookworm AS builder
+FROM python:3.14.3-alpine3.23 AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -17,19 +17,17 @@ RUN python -m pip install --upgrade pip build wheel \
         reportlab==5.0.0 \
         uvicorn==0.51.0
 
-FROM python:3.14.3-slim-bookworm AS runtime
+FROM python:3.14.3-alpine3.23 AS runtime
 
-RUN apt-get update \
-    && apt-get -y --no-install-recommends upgrade \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk upgrade --no-cache
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     QUOTEFLOW_CORS_ALLOW_ORIGINS=http://127.0.0.1:8080 \
     QUOTEFLOW_REQUEST_SIZE_LIMIT_BYTES=262144
 
-RUN addgroup --system quoteflow \
-    && adduser --system --ingroup quoteflow --home /nonexistent --no-create-home quoteflow
+RUN addgroup -S quoteflow \
+    && adduser -S -G quoteflow -h /nonexistent -H quoteflow
 
 WORKDIR /srv/quoteflow
 
