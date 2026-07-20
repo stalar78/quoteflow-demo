@@ -24,6 +24,9 @@ frontend/
       drafts/
         DraftsPanel.tsx
         draftStorage.ts
+      documents/
+        pdfClient.ts
+        pdfClient.test.ts
       exchange/
         DataExchangePanel.tsx
         apiClient.ts
@@ -75,6 +78,7 @@ fixtures/
     invalid.json
 
 compose.yaml
+.github/workflows/ci.yml
 docs/
 ```
 
@@ -99,7 +103,8 @@ UI-слой отвечает за:
 - versioned JSON import/export и CSV export;
 - read-only preview строгого payload;
 - явный calculation preview request с timeout, abort и stale-response protection;
-- отдельное сравнение backend result с локальным результатом без его замены.
+- отдельное сравнение backend result с локальным результатом без его замены;
+- независимый explicit server-PDF download с bounded streaming, response validation и lifecycle protection.
 
 Editable draft отделён от strict calculation input. Денежные и процентные строки преобразуются через разбор строки и `BigInt`; quantity нормализуется в каноническую decimal string. Frontend не считается доверенной стороной.
 
@@ -120,7 +125,7 @@ Backend реализован как stateless FastAPI service.
 - фактический request-body limit;
 - safe internal-error response.
 
-Backend не хранит расчёты, черновики или документы. Stage 5 UI явно вызывает только `/api/v1/calculations/preview`; browser print и server PDF остаются отдельными представлениями, а PDF endpoint из UI не вызывается.
+Backend не хранит расчёты, черновики или документы. UI явно вызывает `/api/v1/calculations/preview` и, отдельным действием, `/api/v1/documents/pdf`. Browser print и server PDF остаются независимыми представлениями.
 
 ## PDF generation boundary
 
@@ -135,6 +140,8 @@ JSON export содержит только versioned envelope `exportVersion: "1"
 CSV создаётся локально с UTF-8 BOM, CRLF, фиксированным порядком колонок и exact decimal strings. Пользовательские текстовые cells защищаются от spreadsheet formula injection. Downloads используют временный object URL с гарантированным удалением anchor и deferred revoke.
 
 Backend preview выполняется только по явному действию пользователя. API client отправляет только `QuoteCalculationInput`, проверяет response runtime structure, ограничивает request ID и денежные значения, поддерживает 10-second timeout, replacement/abort и игнорирует obsolete responses. Backend result показывается отдельно и сравнивается со всеми полями локального результата.
+
+Server PDF client также запускается только явно, отправляет strict input на относительный same-origin endpoint, использует безопасный request ID и 15-second timeout. Response читается bounded stream до 2 MiB, проверяется по MIME и `%PDF-` signature и сохраняется под фиксированным именем. Edit/reset/import/open/replacement/unmount синхронно инвалидируют obsolete request; временные anchor и object URL очищаются.
 
 ## Browser storage boundary
 
@@ -170,11 +177,15 @@ Stage 6 добавляет локальный production-like контур из 
 
 Контур предназначен только для локального integration/QA. Он не является production deployment и не задаёт production CORS, TLS, rate limiting, observability или persistence.
 
+## CI boundary
+
+Stage 7A добавляет GitHub Actions workflow для push и pull request в `main`. Workflow использует `permissions: contents: read`, не сохраняет checkout credentials, закрепляет official actions полными commit SHA и задаёт finite timeouts. Отдельные jobs выполняют frontend tests/build/lint, backend tests/import/wheel asset checks и Docker Compose config/build. Workflow не публикует images, packages, releases и не выполняет deployment.
+
 ## Calculation consistency
 
 TypeScript и Python реализации используют одну формулу, одинаковые лимиты и общие JSON fixtures. Денежные вычисления и UI-formatting не опираются на floating point. Backend всегда пересчитывает totals самостоятельно.
 
-## Поток данных Stage 3–6
+## Поток данных Stage 3–7A
 
 1. Пользователь редактирует `EditableDraft`.
 2. UI сохраняет промежуточные строковые значения.
@@ -185,13 +196,14 @@ TypeScript и Python реализации используют одну форм
 7. Draft может быть сохранён в versioned `localStorage` envelope.
 8. Открытие нового, demo или сохранённого draft сбрасывает touched-state.
 9. Для валидного расчёта с непустым названием UI отображает print representation и разрешает browser print.
-10. Независимый PDF endpoint валидирует тот же input, повторно считает totals и возвращает in-memory PDF.
-11. Валидный strict input может быть экспортирован в JSON/CSV или показан как payload preview.
-12. JSON import полностью проверяется до преобразования в новый `EditableDraft`.
-13. Явный API preview request отправляет strict input, а runtime-validated result сравнивается с локальным расчётом.
-14. В Docker-контуре браузер обращается только к loopback Nginx, а `/api/` маршрутизируется во внутренний backend service.
-15. Healthchecks подтверждают готовность обоих services; остановка Compose удаляет локальные containers/network без пользовательских volumes.
+10. Browser print остаётся локальным; отдельное явное действие отправляет тот же strict input в PDF endpoint, который повторно считает totals и возвращает in-memory PDF.
+11. PDF client bounded-stream читает до 2 MiB, проверяет MIME и `%PDF-`, затем скачивает файл с фиксированным именем; obsolete responses не меняют UI и не инициируют download.
+12. Валидный strict input может быть экспортирован в JSON/CSV или показан как payload preview.
+13. JSON import полностью проверяется до преобразования в новый `EditableDraft`.
+14. Явный API preview request отправляет strict input, а runtime-validated result сравнивается с локальным расчётом.
+15. В Docker-контуре браузер обращается только к loopback Nginx, а `/api/` маршрутизируется во внутренний backend service.
+16. Healthchecks подтверждают готовность обоих services; остановка Compose удаляет локальные containers/network без пользовательских volumes.
 
 ## Следующие архитектурные границы
 
-Этап 7 требует отдельного решения о публичности и deployment. До такого решения текущие local-first, exact calculation, import/export, API, PDF и container boundaries должны сохраняться; публикация, лицензирование и live deployment не выполняются автоматически.
+Stage 7A release-readiness завершён. Stage 7B требует отдельного решения о публичности, лицензии и deployment. До такого решения текущие local-first, exact calculation, import/export, API, PDF, CI и container boundaries должны сохраняться; публикация, лицензирование и live deployment не выполняются автоматически.
