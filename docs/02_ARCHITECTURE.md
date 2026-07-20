@@ -202,7 +202,7 @@ Production Compose добавляет read-only filesystems, tmpfs для runtim
 
 ## CI boundary
 
-Stage 7A добавляет GitHub Actions workflow для push и pull request в `main`. Workflow использует `permissions: contents: read`, не сохраняет checkout credentials, закрепляет official actions полными commit SHA и задаёт finite timeouts. Отдельные jobs выполняют frontend tests/build/lint, backend tests/import/wheel asset checks и Docker Compose config/build. Workflow не публикует images, packages, releases и не выполняет deployment.
+Stage 7A добавляет GitHub Actions workflow для push и pull request в `main`. Workflow использует `permissions: contents: read`, не сохраняет checkout credentials, закрепляет official actions полными commit SHA и задаёт finite timeouts. Отдельные jobs выполняют frontend tests/build/lint, backend tests/import/wheel asset checks, а также local/production Compose config, production image build и loopback/backend-port smoke. Workflow не публикует images, packages, releases и не выполняет deployment.
 
 ## Calculation consistency
 
