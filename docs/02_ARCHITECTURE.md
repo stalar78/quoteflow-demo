@@ -78,8 +78,16 @@ fixtures/
     invalid.json
 
 compose.yaml
+compose.production.yaml
+.env.production.example
+LICENSE
+deploy/
+  nginx/
+    quoteflow.http.conf
+    quoteflow.https.conf
 .github/workflows/ci.yml
 docs/
+  10_DEPLOYMENT_BEGET.md
 ```
 
 ## Frontend boundary
@@ -175,7 +183,22 @@ Stage 6 добавляет локальный production-like контур из 
 - runtime images не содержат bind mounts, project volumes, Docker socket, test dependencies или build wheel directory;
 - Compose не использует privileged mode, host networking или `container_name`.
 
-Контур предназначен только для локального integration/QA. Он не является production deployment и не задаёт production CORS, TLS, rate limiting, observability или persistence.
+Контур предназначен только для локального integration/QA. Он не является production deployment.
+
+## Production deployment boundary
+
+Stage 7B подготавливает отдельный `compose.production.yaml` для существующего Beget VPS:
+
+- frontend публикуется только на `127.0.0.1:8081`;
+- backend имеет только `expose: 8000` во внутренней Docker bridge network и не публикуется на host;
+- browser использует same-origin `/api/`, а container Nginx маршрутизирует запросы в `backend:8000`;
+- системный Nginx VPS является единственной public ingress boundary, завершает TLS и проксирует в loopback frontend;
+- production CORS фиксируется exact origin `https://quoteflow.stalarvision.ru`;
+- system Nginx задаёт per-IP limits отдельно для общего API и PDF endpoint;
+- images маркируются reviewed Git SHA для управляемого rollback;
+- application остаётся stateless и не использует volumes.
+
+Production Compose добавляет read-only filesystems, tmpfs для runtime paths, `no-new-privileges`, drop всех capabilities, PID limits и log rotation. Фактический deployment запрещён до проверки ресурсов VPS, полного pre-deployment audit и отдельного разрешения владельца. Инструкции: `docs/10_DEPLOYMENT_BEGET.md`.
 
 ## CI boundary
 
@@ -206,4 +229,4 @@ TypeScript и Python реализации используют одну форм
 
 ## Следующие архитектурные границы
 
-Stage 7A release-readiness завершён. Stage 7B требует отдельного решения о публичности, лицензии и deployment. До такого решения текущие local-first, exact calculation, import/export, API, PDF, CI и container boundaries должны сохраняться; публикация, лицензирование и live deployment не выполняются автоматически.
+Stage 7A release-readiness завершён. Репозиторий был публичным с момента создания, MIT License согласована и добавлена. Stage 7B deployment-конфигурация для Beget VPS находится на review; live deployment ещё не выполнялся. До отдельного разрешения сохраняются current local-first, exact calculation, import/export, API, PDF, CI и container boundaries.
