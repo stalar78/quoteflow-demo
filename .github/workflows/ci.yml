@@ -128,3 +128,19 @@ jobs:
             docker inspect --format '{{json .HostConfig.PortBindings}}' "$backend_id" >&2
             exit 1
           fi
+          frontend_id="$(docker compose --env-file .env.production.example -f compose.production.yaml ps -q frontend)"
+          python - "$frontend_id" <<'PY'
+          import json
+          import subprocess
+          import sys
+
+          inspection = json.loads(
+              subprocess.check_output(["docker", "inspect", sys.argv[1]], text=True)
+          )[0]
+          bindings = inspection["NetworkSettings"]["Ports"].get("8080/tcp")
+          expected = [{"HostIp": "127.0.0.1", "HostPort": "8081"}]
+          if bindings != expected:
+              raise SystemExit(
+                  f"Expected frontend 8080/tcp binding {expected}, got {bindings}"
+              )
+          PY
