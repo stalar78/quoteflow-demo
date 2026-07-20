@@ -110,6 +110,28 @@ jobs:
         run: docker compose --env-file .env.production.example -f compose.production.yaml config --quiet
       - name: Build production Compose images
         run: docker compose --env-file .env.production.example -f compose.production.yaml build --pull
+      - name: Scan backend runtime image
+        # aquasecurity/trivy-action v0.35.0 (Trivy v0.69.3)
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
+        with:
+          image-ref: quoteflow-backend:replace-with-reviewed-git-sha
+          scanners: vuln
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          format: table
+          exit-code: "1"
+      - name: Scan frontend runtime image
+        # aquasecurity/trivy-action v0.35.0 (Trivy v0.69.3)
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
+        with:
+          image-ref: quoteflow-frontend:replace-with-reviewed-git-sha
+          scanners: vuln
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          format: table
+          exit-code: "1"
       - name: Smoke production Compose boundary
         env:
           COMPOSE_PROJECT_NAME: quoteflow-ci-${{ github.run_id }}
