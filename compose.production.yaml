@@ -17,6 +17,9 @@ services:
     cap_drop:
       - ALL
     pids_limit: 128
+    mem_limit: 768m
+    memswap_limit: 1g
+    cpus: "1.00"
     healthcheck:
       test:
         [
@@ -58,6 +61,9 @@ services:
     cap_drop:
       - ALL
     pids_limit: 64
+    mem_limit: 256m
+    memswap_limit: 384m
+    cpus: "0.50"
     healthcheck:
       test:
         [
