@@ -26,15 +26,15 @@ QuoteFlow нельзя выдавать за клиентский проект. 
 
 - Рабочее название: `QuoteFlow`.
 - Репозиторий: `stalar78/quoteflow-demo`.
-- Репозиторий пока приватный; публичная публикация требует security/publication review.
-- Лицензия пока не выбрана и не добавляется без отдельного решения.
+- Репозиторий был публичным с момента создания.
+- Лицензия проекта: MIT, Copyright (c) 2026 Stanislav Larin (Stalar Vision).
 - Frontend: React, TypeScript, Vite, Tailwind CSS, Vitest, Testing Library.
 - Backend: Python, FastAPI, Pydantic, pytest.
 - Черновики хранятся только в браузере через `localStorage`.
 - Backend остаётся stateless.
 - Server database в MVP отсутствует.
 - Платежи, CRM, реальные webhook/email/Telegram-интеграции, AI и пользовательские аккаунты не входят в MVP.
-- Production deployment требует отдельного review.
+- Production target: существующий Beget VPS, Ubuntu, Docker и системный Nginx; фактический deployment требует отдельного resource/security review.
 
 ## Ограничение данных
 
@@ -42,4 +42,4 @@ QuoteFlow нельзя выдавать за клиентский проект. 
 
 ## Текущий статус
 
-Этап 0 и Этап 1 завершены. Документация создана, загружена в приватный GitHub-репозиторий и прошла первичное review. Следующий этап — scaffold frontend/backend и реализация расчётного ядра с общими fixtures и тестами.
+Этапы 0–6 и Stage 7A завершены. Stage 7B находится на этапе подготовки deployment-конфигурации для `https://quoteflow.stalarvision.ru/` на существующем Beget VPS. Репозиторий публичный с момента создания; MIT License согласована и добавлена. Live deployment не выполнялся.

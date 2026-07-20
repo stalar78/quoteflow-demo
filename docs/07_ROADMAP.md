@@ -10,7 +10,7 @@
 
 Статус: **завершён**.
 
-Созданы project context, requirements, architecture, calculation/data/API contracts, security boundaries, workflow и handoff. Создан приватный репозиторий `stalar78/quoteflow-demo`.
+Созданы project context, requirements, architecture, calculation/data/API contracts, security boundaries, workflow и handoff. Публичный репозиторий `stalar78/quoteflow-demo` создан публичным с самого начала.
 
 ## Этап 2 — scaffold и расчётное ядро
 
@@ -151,12 +151,28 @@ Stage 6 не выполнял publication или deployment и не менял c
 
 Проверенный implementation commit: `eb3f14c45c19048d615a2356a065d4eb5b1819e3`.
 
-## Stage 7B — публикация и deployment
+## Stage 7B — Beget VPS deployment preparation
 
-Статус: **не начат; только после отдельного решения владельца**.
+Статус: **конфигурация и инструкции подготовлены; review продолжается; live deployment не выполнялся**.
 
-- принять решение о сохранении приватности или публичной публикации;
-- согласовать лицензию до её добавления;
-- повторить publication/security audit непосредственно перед изменением видимости;
-- определить production platform, TLS, secrets, CORS, rate limiting, logging, monitoring и rollback до deployment;
-- public GitHub и live deployment выполнять только после явного отдельного согласования.
+Принятые решения:
+
+- репозиторий был публичным с момента создания; visibility менять не требуется;
+- лицензия: MIT, Copyright (c) 2026 Stanislav Larin (Stalar Vision);
+- target: существующий Beget VPS с Ubuntu, Docker и системным Nginx;
+- адрес: `https://quoteflow.stalarvision.ru/`;
+- production frontend публикуется только на `127.0.0.1:8081`;
+- backend доступен только во внутренней Docker network;
+- TLS и public ingress обеспечивает system Nginx;
+- `site-stalarvision` не изменяется.
+
+Подготовлено:
+
+- отдельный hardened `compose.production.yaml`;
+- безопасный `.env.production.example`;
+- bootstrap и final system Nginx vhosts;
+- environment/resource checklist, pre-deployment audit, health plan и rollback runbook;
+- MIT `LICENSE`;
+- CI validation/build/smoke production Compose без deployment.
+
+Следующий gate: получить read-only сведения о ресурсах VPS, выполнить dependency/secret/history/container/CORS/rate-limit/production audit и отдельно согласовать фактический deployment.
