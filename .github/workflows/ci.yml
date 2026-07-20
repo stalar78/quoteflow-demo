@@ -152,8 +152,9 @@ jobs:
           vuln-type: os,library
           severity: HIGH,CRITICAL
           ignore-unfixed: false
-          format: table
-          exit-code: "1"
+          format: json
+          output: trivy-backend.json
+          exit-code: "0"
       - name: Scan frontend runtime image
         id: scan-frontend
         continue-on-error: true
@@ -165,18 +166,78 @@ jobs:
           vuln-type: os,library
           severity: HIGH,CRITICAL
           ignore-unfixed: false
-          format: table
-          exit-code: "1"
-      - name: Enforce runtime vulnerability gate
+          format: json
+          output: trivy-frontend.json
+          exit-code: "0"
+      - name: Report and enforce runtime vulnerability gate
         if: always()
-        env:
-          BACKEND_SCAN_OUTCOME: ${{ steps.scan-backend.outcome }}
-          FRONTEND_SCAN_OUTCOME: ${{ steps.scan-frontend.outcome }}
         run: |
-          if [ "$BACKEND_SCAN_OUTCOME" != "success" ] || [ "$FRONTEND_SCAN_OUTCOME" != "success" ]; then
-            echo "At least one runtime image has HIGH/CRITICAL vulnerability findings" >&2
-            exit 1
-          fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          findings = []
+          for service in ("backend", "frontend"):
+              report_path = Path(f"trivy-{service}.json")
+              if not report_path.exists():
+                  raise SystemExit(f"Missing Trivy report: {report_path}")
+              report = json.loads(report_path.read_text())
+              for result in report.get("Results") or []:
+                  target = result.get("Target", "")
+                  for vulnerability in result.get("Vulnerabilities") or []:
+                      findings.append(
+                          {
+                              "service": service,
+                              "target": target,
+                              "package": vulnerability.get("PkgName", ""),
+                              "id": vulnerability.get("VulnerabilityID", ""),
+                              "severity": vulnerability.get("Severity", ""),
+                              "status": vulnerability.get("Status", ""),
+                              "installed": vulnerability.get("InstalledVersion", ""),
+                              "fixed": vulnerability.get("FixedVersion", ""),
+                              "title": vulnerability.get("Title", ""),
+                          }
+                      )
+
+          order = {"CRITICAL": 0, "HIGH": 1}
+          findings.sort(
+              key=lambda item: (
+                  order.get(item["severity"], 9),
+                  item["service"],
+                  item["id"],
+                  item["package"],
+                  item["target"],
+              )
+          )
+          print(
+              "service\tseverity\tvulnerability\tpackage\tinstalled\tfixed"
+              "\tstatus\ttarget\ttitle"
+          )
+          for item in findings:
+              print(
+                  "\t".join(
+                      item[key].replace("\t", " ").replace("\n", " ")
+                      for key in (
+                          "service",
+                          "severity",
+                          "id",
+                          "package",
+                          "installed",
+                          "fixed",
+                          "status",
+                          "target",
+                          "title",
+                      )
+                  )
+              )
+          counts = {
+              severity: sum(item["severity"] == severity for item in findings)
+              for severity in ("CRITICAL", "HIGH")
+          }
+          print(f"Runtime vulnerability totals: {counts}")
+          if findings:
+              raise SystemExit("HIGH/CRITICAL runtime vulnerabilities remain")
+          PY
       - name: Smoke production Compose boundary
         env:
           COMPOSE_PROJECT_NAME: quoteflow-ci-${{ github.run_id }}
