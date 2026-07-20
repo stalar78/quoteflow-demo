@@ -19,6 +19,10 @@ RUN python -m pip install --upgrade pip build wheel \
 
 FROM python:3.14.3-slim-bookworm AS runtime
 
+RUN apt-get update \
+    && apt-get -y --no-install-recommends upgrade \
+    && rm -rf /var/lib/apt/lists/*
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     QUOTEFLOW_CORS_ALLOW_ORIGINS=http://127.0.0.1:8080 \
